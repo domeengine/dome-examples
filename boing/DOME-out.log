@@ -1,0 +1,90 @@
+Reading from filesystem: main.wren
+Loading module ./zero
+Reading from filesystem: ./zero.wren
+Reading from filesystem: music/theme.ogg
+Audio loaded: music/theme.ogg
+Reading from filesystem: sounds/down.ogg
+Audio loaded: sounds/down.ogg
+Reading from filesystem: sounds/up.ogg
+Audio loaded: sounds/up.ogg
+Reading from filesystem: images/table.png
+Reading from filesystem: sounds/score_goal0.ogg
+Audio loaded: sounds/score_goal0.ogg
+Reading from filesystem: sounds/hit_slow0.ogg
+Audio loaded: sounds/hit_slow0.ogg
+Reading from filesystem: sounds/hit_medium0.ogg
+Audio loaded: sounds/hit_medium0.ogg
+Reading from filesystem: sounds/hit_fast0.ogg
+Audio loaded: sounds/hit_fast0.ogg
+Reading from filesystem: sounds/hit_veryfast0.ogg
+Audio loaded: sounds/hit_veryfast0.ogg
+Reading from filesystem: sounds/bounce_synth0.ogg
+Audio loaded: sounds/bounce_synth0.ogg
+Reading from filesystem: sounds/bounce0.ogg
+Audio loaded: sounds/bounce0.ogg
+Reading from filesystem: sounds/bounce1.ogg
+Audio loaded: sounds/bounce1.ogg
+Reading from filesystem: sounds/bounce2.ogg
+Audio loaded: sounds/bounce2.ogg
+Reading from filesystem: sounds/bounce3.ogg
+Audio loaded: sounds/bounce3.ogg
+Reading from filesystem: sounds/bounce4.ogg
+Audio loaded: sounds/bounce4.ogg
+Reading from filesystem: sounds/hit0.ogg
+Audio loaded: sounds/hit0.ogg
+Reading from filesystem: sounds/hit1.ogg
+Audio loaded: sounds/hit1.ogg
+Reading from filesystem: sounds/hit2.ogg
+Audio loaded: sounds/hit2.ogg
+Reading from filesystem: sounds/hit3.ogg
+Audio loaded: sounds/hit3.ogg
+Reading from filesystem: sounds/hit4.ogg
+Audio loaded: sounds/hit4.ogg
+Reading from filesystem: images/bat00.png
+Reading from filesystem: images/bat10.png
+Reading from filesystem: images/ball.png
+Reading from filesystem: images/digit00.png
+Reading from filesystem: images/menu0.png
+Reading from filesystem: images/bat01.png
+Reading from filesystem: images/impact0.png
+Reading from filesystem: images/impact1.png
+Reading from filesystem: images/impact3.png
+Reading from filesystem: images/blank.png
+Reading from filesystem: images/bat11.png
+Reading from filesystem: images/impact2.png
+Reading from filesystem: images/impact4.png
+Reading from filesystem: images/menu1.png
+Reading from filesystem: images/effect1.png
+Reading from filesystem: images/digit20.png
+Reading from filesystem: images/digit21.png
+Reading from filesystem: images/bat12.png
+Reading from filesystem: images/digit01.png
+Reading from filesystem: images/digit22.png
+Reading from filesystem: images/digit02.png
+Reading from filesystem: images/digit23.png
+Reading from filesystem: images/digit03.png
+Reading from filesystem: images/effect0.png
+Reading from filesystem: images/digit10.png
+Reading from filesystem: images/digit11.png
+Reading from filesystem: images/bat02.png
+Reading from filesystem: images/digit12.png
+Reading from filesystem: images/digit13.png
+Reading from filesystem: images/digit14.png
+Reading from filesystem: images/digit04.png
+Reading from filesystem: images/digit15.png
+Reading from filesystem: images/digit05.png
+Reading from filesystem: images/digit16.png
+Reading from filesystem: images/digit06.png
+Reading from filesystem: images/digit24.png
+Reading from filesystem: images/digit25.png
+Reading from filesystem: images/digit26.png
+Reading from filesystem: images/digit27.png
+Reading from filesystem: images/digit07.png
+Reading from filesystem: images/digit28.png
+Reading from filesystem: images/digit08.png
+Reading from filesystem: images/digit17.png
+Reading from filesystem: images/digit18.png
+Reading from filesystem: images/digit19.png
+Reading from filesystem: images/digit09.png
+Reading from filesystem: images/digit29.png
+Reading from filesystem: images/over.png
