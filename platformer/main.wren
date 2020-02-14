@@ -3,16 +3,20 @@ import "graphics" for Canvas, Color
 import "input" for Keyboard
 import "math" for Vec, M
 
+
+// Physics Constants
 var JUMP = 3
 var GRAVITY = 0.2
 var FRICTION = 0.16
 
-var MAX_SPEED = 2
+var MAX_SPEED = 1
 var MOVE_FORCE = 0.08
 var CHANGE_FORCE = 0.5
 
+// World space
 var TILE = 8
 
+// Actions
 var ActorSquish = Fn.new {|actor|
   var world = actor.world
   for(i in 0...world.actors.count) {
@@ -31,6 +35,7 @@ var HaltY = Fn.new {|actor|
   actor.acc.y = 0
 }
 
+// Engine classes
 class Entity {
   construct new(pos, size) {
     _pos = pos
@@ -82,7 +87,7 @@ class Actor is Entity {
   moveX(distance, action) {
     _rx = _rx + distance
     var move = Vec.new(M.round(_rx), 0)
-    if (move.x != 0) {
+    if (move.manhattan != 0) {
       _rx = _rx - move.x
       var sign = Vec.new(M.sign(move.x), 0)
 
@@ -92,7 +97,6 @@ class Actor is Entity {
           pos = pos + sign
           move = move - sign
         } else {
-          // if not collide
           if (action != null) {
             action.call(this)
           }
@@ -307,9 +311,7 @@ class World {
   }
 
   background() {
-    // Draw background
     Canvas.cls(Color.blue)
-    Canvas.rectfill(0, 120, 128, 8, Color.green)
   }
 
   isColliding(actor) {
