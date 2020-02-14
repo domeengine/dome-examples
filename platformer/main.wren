@@ -25,6 +25,7 @@ class Entity {
   pos=(v) { _pos = v }
   size { _size }
   size=(v) { _size = v }
+  world { _world }
 
   update() {}
   draw(alpha) {}
@@ -32,7 +33,7 @@ class Entity {
   static isOverlapping(a, b) {
     return a.pos.x < b.pos.x + b.size.x &&
       a.pos.x + a.size.x > b.pos.x &&
-      a.pos.y + a.size.y < b.pos.y &&
+      a.pos.y < b.pos.y + b.size.y &&
       a.pos.y + a.size.y > b.pos.y
   }
 }
@@ -57,14 +58,16 @@ class Actor is Entity {
 
       while (move.manhattan != 0) {
         var testPos = sign + pos
-        move = move - sign
-      }
-      // check collide at pos
-      pos = pos + sign
-      // check collide at pos
-      // if not collide
-      if (action != null) {
-        action.call(this)
+        if (!world.isColliding(Actor.new(testPos, size))) {
+          move = move - sign
+          pos = pos + sign
+        } else {
+          // if not collide
+          if (action != null) {
+            action.call(this)
+          }
+          break
+        }
       }
     }
   }
@@ -77,14 +80,16 @@ class Actor is Entity {
 
       while (move.manhattan != 0) {
         var testPos = sign + pos
-        move = move - sign
-      }
-      // check collide at pos
-      pos = pos + sign
-      // check collide at pos
-      // if not collide
-      if (action != null) {
-        action.call(this)
+        if (!world.isColliding(Actor.new(testPos, size))) {
+          move = move - sign
+          pos = pos + sign
+        } else {
+          // if not collide
+          if (action != null) {
+            action.call(this)
+          }
+          break
+        }
       }
     }
   }
@@ -97,6 +102,7 @@ class Solid is Entity {
     _ry = 0
     _collidable = true
   }
+  collidable { _collidable }
   move(vec) { move(vec.x, vec.y) }
   move(x, y) {
 
@@ -156,6 +162,19 @@ class World {
     // Draw background
     Canvas.rectfill(0, 0, 128, 120, Color.blue)
     Canvas.rectfill(0, 120, 128, 8, Color.green)
+  }
+
+  isColliding(actor) {
+    var colliding = false
+    var solid = false
+    // TODO: Check tilemap
+    if (!solid) {
+      solids.where {|solid| solid.collidable }.each {|solid|
+        colliding = colliding || Entity.isOverlapping(actor, solid)
+      }
+    }
+
+    return solid || colliding
   }
 
   actors { _actors }
