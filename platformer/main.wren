@@ -3,7 +3,18 @@ import "graphics" for Canvas, Color
 import "input" for Keyboard
 import "math" for Vec, M
 
+var JUMP = 3
+var GRAVITY = 0.2
+
 var TILE = 8
+var HaltX = Fn.new {|actor|
+  actor.vel.x = 0
+  actor.acc.x = 0
+}
+var HaltY = Fn.new {|actor|
+  actor.vel.y = 0
+  actor.acc.y = 0
+}
 
 class Entity {
   construct new(pos, size) {
@@ -46,6 +57,10 @@ class Actor is Entity {
     _rx = 0
     _ry = 0
   }
+  vel { _vel }
+  vel=(v) { _vel = v }
+  acc { _acc }
+  acc=(v) { _acc = v }
 
   moveX(distance) { moveX(distance, null) }
   moveY(distance) { moveY(distance, null) }
@@ -93,6 +108,18 @@ class Actor is Entity {
       }
     }
   }
+
+  isAbove(solid) {
+    return pos.y + size.y == solid.pos.y &&
+      pos.x <= solid.pos.x + solid.size.x &&
+      pos.x + size.x >= solid.pos.x
+  }
+
+  update() {
+    moveY(vel.y, HaltY)
+    moveX(vel.x, HaltX)
+  }
+
   squish() {}
 }
 class Solid is Entity {
@@ -112,14 +139,20 @@ class Solid is Entity {
 // -------- GAME CODE ---------
 
 class Block is Solid {
-  construct new() {
+  construct new(color) {
     super(
       Vec.new(10 * TILE, 4 * TILE),
       Vec.new(2 * TILE, 1 * TILE)
     )
+    _color = color
+  }
+
+  construct new(pos, size, color) {
+    super(pos, size)
+    _color = color
   }
   draw(alpha) {
-    Canvas.rect(pos.x, pos.y, size.x, size.y, Color.red)
+    Canvas.rectfill(pos.x, pos.y, size.x, size.y, _color)
   }
 }
 
@@ -129,17 +162,48 @@ class Player is Actor {
   }
   update() {
     if (Keyboard.isKeyDown("left")) {
-      moveX(-1)
+      if (M.sign(vel.x) == 1) {
+        acc.x = acc.x - 0.5
+      } else {
+        acc.x = acc.x - 0.08
+      }
+    } else if (Keyboard.isKeyDown("right")) {
+      if (M.sign(vel.x) == -1) {
+        acc.x = acc.x + 0.5
+      } else {
+        acc.x = acc.x + 0.08
+      }
+    } else {
+      if (M.abs(vel.x) > 0.08) {
+        acc.x = -M.sign(vel.x) * 0.16
+      } else {
+        acc.x = 0
+        vel.x = 0
+      }
     }
-    if (Keyboard.isKeyDown("right")) {
-      moveX(1)
+
+    var onGround = world.isOnGround(this)
+
+    if (onGround && Keyboard.isKeyDown("space")) {
+      acc.y = -JUMP
     }
-    if (Keyboard.isKeyDown("up")) {
-      moveY(-1)
+
+    if (!onGround) {
+      // This must not be 0.5, for rounding purposes
+      acc.y = GRAVITY
+    } else {
+      vel.y = 0
     }
-    if (Keyboard.isKeyDown("down")) {
-      moveY(1)
+
+    acc = acc + Vec.new()
+    vel = vel + acc
+    /*
+    if (M.abs(vel.y) > 0.08) {
+      vel.y
     }
+    */
+    vel.x = M.mid(-2, vel.x, 2)
+    super.update()
   }
   draw(alpha) {
     Canvas.rectfill(pos.x, pos.y, size.x, size.y, Color.red)
@@ -148,7 +212,7 @@ class Player is Actor {
 
 class World {
   construct init() {
-    _solids = [Block.new()]
+    _solids = [Block.new(Color.orange), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green)]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
   }
@@ -175,6 +239,19 @@ class World {
     }
 
     return solid || colliding
+  }
+
+  isOnGround(actor) {
+    var riding = false
+    var solid = false
+    // TODO: Check tilemap
+    if (!solid) {
+      solids.where {|solid| solid.collidable }.each {|solid|
+        riding = riding || actor.isAbove(solid)
+      }
+    }
+
+    return solid || riding
   }
 
   actors { _actors }
