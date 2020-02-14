@@ -180,6 +180,32 @@ class Solid is Entity {
           }
         }
       }
+      if (my != 0) {
+        var riding = getRiding()
+        _ry = _ry - my
+        pos.y = pos.y + my
+        var bottom = pos.y + size.y
+        var top = pos.y
+        if (my > 0) {
+          world.actors.each {|actor|
+            if (Entity.isOverlapping(this, actor)) {
+              var actorTop = actor.pos.y
+              actor.moveY(bottom - actorTop, ActorSquish)
+            } else if (riding.contains(actor)) {
+              actor.moveY(my)
+            }
+          }
+        } else {
+          world.actors.each {|actor|
+            if (Entity.isOverlapping(this, actor)) {
+              var actorBottom = actor.pos.y + actor.size.y
+              actor.moveY(top - actorBottom, ActorSquish)
+            } else if (riding.contains(actor)) {
+              actor.moveY(my)
+            }
+          }
+        }
+      }
     }
     _collidable = true
   }
@@ -270,7 +296,7 @@ class Player is Actor {
 
 class World {
   construct init() {
-    _solids = [Block.new(Color.orange, Vec.new(-0.1, 0)), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green, Vec.new())]
+    _solids = [Block.new(Color.orange, Vec.new(0, -0.1)), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green, Vec.new())]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
   }
