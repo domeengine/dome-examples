@@ -5,6 +5,11 @@ import "math" for Vec, M
 
 var JUMP = 3
 var GRAVITY = 0.2
+var FRICTION = 0.16
+
+var MAX_SPEED = 2
+var MOVE_FORCE = 0.08
+var CHANGE_FORCE = 0.5
 
 var TILE = 8
 var HaltX = Fn.new {|actor|
@@ -163,19 +168,19 @@ class Player is Actor {
   update() {
     if (Keyboard.isKeyDown("left")) {
       if (M.sign(vel.x) == 1) {
-        acc.x = acc.x - 0.5
+        acc.x = acc.x - CHANGE_FORCE
       } else {
-        acc.x = acc.x - 0.08
+        acc.x = acc.x - MOVE_FORCE
       }
     } else if (Keyboard.isKeyDown("right")) {
       if (M.sign(vel.x) == -1) {
-        acc.x = acc.x + 0.5
+        acc.x = acc.x + CHANGE_FORCE
       } else {
-        acc.x = acc.x + 0.08
+        acc.x = acc.x + MOVE_FORCE
       }
     } else {
-      if (M.abs(vel.x) > 0.08) {
-        acc.x = -M.sign(vel.x) * 0.16
+      if (M.abs(vel.x) > MOVE_FORCE) {
+        acc.x = -M.sign(vel.x) * FRICTION
       } else {
         acc.x = 0
         vel.x = 0
@@ -202,7 +207,7 @@ class Player is Actor {
       vel.y
     }
     */
-    vel.x = M.mid(-2, vel.x, 2)
+    vel.x = M.mid(-MAX_SPEED, vel.x, MAX_SPEED)
     super.update()
   }
   draw(alpha) {
@@ -224,7 +229,7 @@ class World {
 
   background() {
     // Draw background
-    Canvas.rectfill(0, 0, 128, 120, Color.blue)
+    Canvas.cls(Color.blue)
     Canvas.rectfill(0, 120, 128, 8, Color.green)
   }
 
