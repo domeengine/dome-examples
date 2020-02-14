@@ -12,6 +12,16 @@ var MOVE_FORCE = 0.08
 var CHANGE_FORCE = 0.5
 
 var TILE = 8
+
+var ActorSquish = Fn.new {|actor|
+  var world = actor.world
+  for(i in 0...world.actors.count) {
+    if (world.actors[i] == actor) {
+      world.actors.removeAt(i)
+    }
+  }
+}
+
 var HaltX = Fn.new {|actor|
   actor.vel.x = 0
   actor.acc.x = 0
@@ -72,15 +82,15 @@ class Actor is Entity {
   moveX(distance, action) {
     _rx = _rx + distance
     var move = Vec.new(M.round(_rx), 0)
-    if (move.manhattan != 0) {
+    if (move.x != 0) {
       _rx = _rx - move.x
       var sign = Vec.new(M.sign(move.x), 0)
 
       while (move.manhattan != 0) {
         var testPos = sign + pos
         if (!world.isColliding(Actor.new(testPos, size))) {
-          move = move - sign
           pos = pos + sign
+          move = move - sign
         } else {
           // if not collide
           if (action != null) {
@@ -116,17 +126,16 @@ class Actor is Entity {
 
   isAbove(solid) {
     return pos.y + size.y == solid.pos.y &&
-      pos.x <= solid.pos.x + solid.size.x &&
-      pos.x + size.x >= solid.pos.x
+      pos.x < solid.pos.x + solid.size.x &&
+      pos.x + size.x > solid.pos.x
   }
 
   update() {
     moveY(vel.y, HaltY)
     moveX(vel.x, HaltX)
   }
-
-  squish() {}
 }
+
 class Solid is Entity {
   construct new(pos, size) {
     super(pos, size)
@@ -137,27 +146,71 @@ class Solid is Entity {
   collidable { _collidable }
   move(vec) { move(vec.x, vec.y) }
   move(x, y) {
+    _rx = _rx + x
+    _ry = _ry + y
+    var mx = M.round(_rx)
+    var my = M.round(_ry)
+    if (mx != 0 || my != 0) {
+      _collidable = false
 
+      // x-axis movement first
+      if (mx != 0) {
+        var riding = getRiding()
+        _rx = _rx - mx
+        pos.x = pos.x + mx
+        var right = pos.x + size.x
+        var left = pos.x
+        if (mx > 0) {
+          world.actors.each {|actor|
+            if (Entity.isOverlapping(this, actor)) {
+              var actorLeft = actor.pos.x
+              actor.moveX(right - actorLeft, ActorSquish)
+            } else if (riding.contains(actor)) {
+              actor.moveX(mx)
+            }
+          }
+        } else {
+          world.actors.each {|actor|
+            if (Entity.isOverlapping(this, actor)) {
+              var actorRight = actor.pos.x + actor.size.x
+              actor.moveX(left - actorRight, ActorSquish)
+            } else if (riding.contains(actor)) {
+              actor.moveX(mx)
+            }
+          }
+        }
+      }
+    }
+    _collidable = true
+  }
+
+  getRiding() {
+    return world.actors.where {|actor| actor.isAbove(this) }
   }
 }
 
 // -------- GAME CODE ---------
 
 class Block is Solid {
-  construct new(color) {
+  construct new(color, vel) {
     super(
-      Vec.new(10 * TILE, 4 * TILE),
+      Vec.new(10 * TILE, 14 * TILE),
       Vec.new(2 * TILE, 1 * TILE)
     )
+    _vel = vel
     _color = color
   }
 
-  construct new(pos, size, color) {
+  construct new(pos, size, color, vel) {
     super(pos, size)
     _color = color
+    _vel = vel
   }
   draw(alpha) {
     Canvas.rectfill(pos.x, pos.y, size.x, size.y, _color)
+  }
+  update() {
+    move(_vel)
   }
 }
 
@@ -217,7 +270,7 @@ class Player is Actor {
 
 class World {
   construct init() {
-    _solids = [Block.new(Color.orange), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green)]
+    _solids = [Block.new(Color.orange, Vec.new(-0.1, 0)), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green, Vec.new())]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
   }
