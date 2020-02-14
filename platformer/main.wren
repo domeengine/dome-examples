@@ -9,10 +9,16 @@ class Entity {
   construct new(pos, size) {
     _pos = pos
     _size = size
+    _world = null
   }
+
   construct new() {
     _pos = Vec.new()
     _size = Vec.new()
+  }
+
+  bindWorld(world) {
+    _world = world
   }
 
   pos { _pos }
@@ -134,27 +140,44 @@ class Player is Actor {
   }
 }
 
+class World {
+  construct init() {
+    _solids = [Block.new()]
+    _actors = [Player.new()]
+    (_solids + _actors).each {|entity| entity.bindWorld(this) }
+  }
+
+  update() {
+    _solids.each {|solid| solid.update() }
+    _actors.each {|actor| actor.update() }
+  }
+
+  background() {
+    // Draw background
+    Canvas.rectfill(0, 0, 128, 120, Color.blue)
+    Canvas.rectfill(0, 120, 128, 8, Color.green)
+  }
+
+  actors { _actors }
+  solids { _solids }
+}
 
 class Game {
     static init() {
-      __solids = [Block.new()]
-      __actors = [Player.new()]
+      __world = World.init()
       Canvas.resize(128, 128)
     }
     static update() {
       if (Keyboard.isKeyDown("escape")) {
         Process.exit()
       }
-      __solids.each {|solid| solid.update() }
-      __actors.each {|actor| actor.update() }
+      __world.update()
     }
     static draw(alpha) {
-      // Draw background
-      Canvas.rectfill(0, 0, 128, 120, Color.blue)
-      Canvas.rectfill(0, 120, 128, 8, Color.green)
+      __world.background()
 
       // Draw entities
-      __solids.each {|solid| solid.draw(alpha) }
-      __actors.each {|actor| actor.draw(alpha) }
+      __world.solids.each {|solid| solid.draw(alpha) }
+      __world.actors.each {|actor| actor.draw(alpha) }
     }
 }
