@@ -3,7 +3,6 @@ import "graphics" for Canvas, Color
 import "input" for Keyboard
 import "math" for Vec, M
 
-
 // Physics Constants
 var JUMP = 3
 var GRAVITY = 0.2
@@ -14,7 +13,47 @@ var MOVE_FORCE = 0.08
 var CHANGE_FORCE = 0.5
 
 // World space
-var TILE = 8
+var TILE_SIZE = 8
+
+class Tile {
+  construct new(type, solid) {
+    _type = type
+    _solid = solid
+  }
+  type { _type }
+  solid { _solid }
+}
+
+class BasicTilemap {
+  construct init(width, height) {
+    _width = width
+    _height = height
+    _tiles = List.filled(_width * _height, Tile.new(0, false))
+  }
+
+  get(vec) { get(vec.x, vec.y) }
+  get(x, y) {
+    if (x < 0 || x >= width || y < 0 || y >= height) {
+      return Tile.new(null, true)
+    }
+    return _tiles[_height * y + x]
+  }
+
+  set(vec, tile) { setTile(vec.x, vec.y, tile) }
+  set(x, y, tile) {
+    if (x < 0 || x >= width || y < 0 || y >= height) {
+      Fiber.abort("Tile index out of bounds (%(x),%(y))")
+    }
+    if (!tile is Tile) {
+      Fiber.abort("Only instances of Tile can be added to the tilemap")
+    }
+    _tiles[_height * y + x] = tile
+  }
+
+  width { _width }
+  height { _height }
+}
+
 
 // Actions
 var ActorSquish = Fn.new {|actor|
@@ -224,8 +263,8 @@ class Solid is Entity {
 class Block is Solid {
   construct new(color, vel) {
     super(
-      Vec.new(10 * TILE, 14 * TILE),
-      Vec.new(2 * TILE, 1 * TILE)
+      Vec.new(10 * TILE_SIZE, 14 * TILE_SIZE),
+      Vec.new(2 * TILE_SIZE, 1 * TILE_SIZE)
     )
     _vel = vel
     _color = color
@@ -246,7 +285,7 @@ class Block is Solid {
 
 class Player is Actor {
   construct new() {
-    super(Vec.new(), Vec.new(TILE, TILE))
+    super(Vec.new(), Vec.new(TILE_SIZE, TILE_SIZE))
   }
   update() {
     if (Keyboard.isKeyDown("left")) {
@@ -285,11 +324,6 @@ class Player is Actor {
 
     acc = acc + Vec.new()
     vel = vel + acc
-    /*
-    if (M.abs(vel.y) > 0.08) {
-      vel.y
-    }
-    */
     vel.x = M.mid(-MAX_SPEED, vel.x, MAX_SPEED)
     super.update()
   }
@@ -300,9 +334,13 @@ class Player is Actor {
 
 class World {
   construct init() {
-    _solids = [Block.new(Color.orange, Vec.new(0, -0.1)), Block.new(Vec.new(0, 120), Vec.new(128, 8), Color.green, Vec.new())]
+    _solids = [Block.new(Color.orange, Vec.new(0, -0.1))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
+    _tilemap = BasicTilemap.init(16, 16)
+    for (x in 0..._tilemap.width) {
+      _tilemap.set(x, _tilemap.height - 1, Tile.new(1, true))
+    }
   }
 
   update() {
@@ -310,14 +348,39 @@ class World {
     _actors.each {|actor| actor.update() }
   }
 
-  background() {
+  draw(alpha) {
     Canvas.cls(Color.blue)
+    for (y in 0..._tilemap.height) {
+      for (x in 0..._tilemap.width) {
+        var tile = _tilemap.get(x, y)
+        if (tile.type == 0) {
+          Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.new(0, 0, 0, 0))
+        } else {
+          Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.darkgreen)
+        }
+      }
+    }
+
+    // Draw entities
+    _solids.each {|solid| solid.draw(alpha) }
+    _actors.each {|actor| actor.draw(alpha) }
+  }
+
+  isSolidAt(x, y) {
+    var tx = M.floor(x / 8)
+    var ty = M.floor(y / 8)
+    return map.get(tx, ty).solid
   }
 
   isColliding(actor) {
     var colliding = false
-    var solid = false
-    // TODO: Check tilemap
+    var pos = actor.pos
+    var size = actor.size - Vec.new(1, 1)
+    var solid = isSolidAt(pos.x, pos.y) ||
+      isSolidAt(pos.x + size.x, pos.y + size.y) ||
+      isSolidAt(pos.x, pos.y + size.y) ||
+      isSolidAt(pos.x + size.x, pos.y)
+
     if (!solid) {
       solids.where {|solid| solid.collidable }.each {|solid|
         colliding = colliding || Entity.isOverlapping(actor, solid)
@@ -329,7 +392,10 @@ class World {
 
   isOnGround(actor) {
     var riding = false
-    var solid = false
+    var pos = actor.pos
+    var size = actor.size - Vec.new(1, 0)
+    var solid = isSolidAt(pos.x + size.x, pos.y + size.y) ||
+      isSolidAt(pos.x, pos.y + size.y)
     // TODO: Check tilemap
     if (!solid) {
       solids.where {|solid| solid.collidable }.each {|solid|
@@ -340,6 +406,7 @@ class World {
     return solid || riding
   }
 
+  map { _tilemap }
   actors { _actors }
   solids { _solids }
 }
@@ -356,10 +423,6 @@ class Game {
       __world.update()
     }
     static draw(alpha) {
-      __world.background()
-
-      // Draw entities
-      __world.solids.each {|solid| solid.draw(alpha) }
-      __world.actors.each {|actor| actor.draw(alpha) }
+      __world.draw(alpha)
     }
 }
