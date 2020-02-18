@@ -2,6 +2,7 @@ import "dome" for Process
 import "graphics" for Canvas, Color
 import "input" for Keyboard
 import "math" for Vec, M
+import "./keys" for Key
 
 // Physics Constants
 var JUMP = 3
@@ -19,9 +20,16 @@ class Tile {
   construct new(type, solid) {
     _type = type
     _solid = solid
+    _oneway = false
+  }
+  construct new(type, solid, oneway) {
+    _type = type
+    _solid = solid
+    _oneway = oneway
   }
   type { _type }
   solid { _solid }
+  oneway { _oneway }
 }
 
 class BasicTilemap {
@@ -131,8 +139,9 @@ class Actor is Entity {
       var sign = Vec.new(M.sign(move.x), 0)
 
       while (move.manhattan != 0) {
-        var testPos = sign + pos
-        if (!world.isColliding(Actor.new(testPos, size))) {
+        var testActor = Actor.new(sign + pos, size)
+        testActor.vel.x = sign.x
+        if (!world.isColliding(this, testActor)) {
           pos = pos + sign
           move = move - sign
         } else {
@@ -152,8 +161,8 @@ class Actor is Entity {
       var sign = Vec.new(0, M.sign(move.y))
 
       while (move.manhattan != 0) {
-        var testPos = sign + pos
-        if (!world.isColliding(Actor.new(testPos, size))) {
+        var testActor = Actor.new(sign + pos, size)
+        if (!world.isColliding(this, testActor)) {
           move = move - sign
           pos = pos + sign
         } else {
@@ -185,8 +194,11 @@ class Solid is Entity {
     _rx = 0
     _ry = 0
     _collidable = true
+    _oneway = true
   }
+  oneway { _oneway }
   collidable { _collidable }
+
   move(vec) { move(vec.x, vec.y) }
   move(x, y) {
     _rx = _rx + x
@@ -205,7 +217,7 @@ class Solid is Entity {
         var left = pos.x
         if (mx > 0) {
           world.actors.each {|actor|
-            if (Entity.isOverlapping(this, actor)) {
+            if (!oneway && Entity.isOverlapping(this, actor)) {
               var actorLeft = actor.pos.x
               actor.moveX(right - actorLeft, ActorSquish)
             } else if (riding.contains(actor)) {
@@ -214,7 +226,7 @@ class Solid is Entity {
           }
         } else {
           world.actors.each {|actor|
-            if (Entity.isOverlapping(this, actor)) {
+            if (!oneway && Entity.isOverlapping(this, actor)) {
               var actorRight = actor.pos.x + actor.size.x
               actor.moveX(left - actorRight, ActorSquish)
             } else if (riding.contains(actor)) {
@@ -263,7 +275,7 @@ class Solid is Entity {
 class Block is Solid {
   construct new(color, vel) {
     super(
-      Vec.new(10 * TILE_SIZE, 14 * TILE_SIZE),
+      Vec.new(8 * TILE_SIZE, 13 * TILE_SIZE),
       Vec.new(2 * TILE_SIZE, 1 * TILE_SIZE)
     )
     _vel = vel
@@ -286,6 +298,7 @@ class Block is Solid {
 class Player is Actor {
   construct new() {
     super(Vec.new(), Vec.new(TILE_SIZE, TILE_SIZE))
+    _jumpButton = Key.new("space", true, false)
   }
   update() {
     if (Keyboard.isKeyDown("left")) {
@@ -311,15 +324,31 @@ class Player is Actor {
 
     var onGround = world.isOnGround(this)
 
-    if (onGround && Keyboard.isKeyDown("space")) {
-      acc.y = -JUMP
+    if (onGround) {
+      if (_jumpButton.update()) {
+        acc.y = -JUMP
+      }
+      var ground = [
+        world.getTileAt(pos.x + size.x, pos.y + size.y),
+        world.getTileAt(pos.x, pos.y + size.y)
+      ]
+      if (Keyboard.isKeyDown("down")) {
+        if (ground.all {|tile| tile.type != 0 && (!tile.solid || tile.oneway) } ||
+          world.solids.where {|solid| isAbove(solid) }.all {|solid| solid.oneway }) {
+          pos.y = pos.y + 1
+          // onGround = false
+          onGround = world.isOnGround(this)
+        }
+      }
     }
 
     if (!onGround) {
       // This must not be 0.5, for rounding purposes
       acc.y = GRAVITY
     } else {
-      vel.y = 0
+      // If this is enabled, you can't pass through tiles
+      // Because it assumes you're on the ground now so you should stop
+      // vel.y = 0
     }
 
     acc = acc + Vec.new()
@@ -341,6 +370,7 @@ class World {
     for (x in 0..._tilemap.width) {
       _tilemap.set(x, _tilemap.height - 1, Tile.new(1, true))
     }
+    _tilemap.set(4, 13, Tile.new(2, true, true))
   }
 
   update() {
@@ -353,10 +383,12 @@ class World {
     for (y in 0..._tilemap.height) {
       for (x in 0..._tilemap.width) {
         var tile = _tilemap.get(x, y)
-        if (tile.type == 0) {
-          Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.new(0, 0, 0, 0))
-        } else {
+        if (tile.type == 2) {
+          Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.pink)
+        } else if (tile.type == 1) {
           Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.darkgreen)
+        } else {
+          Canvas.rectfill(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE, Color.new(0, 0, 0, 0))
         }
       }
     }
@@ -366,39 +398,76 @@ class World {
     _actors.each {|actor| actor.draw(alpha) }
   }
 
+  getTileAt(vec) { getTileAt(vec.x, vec.y) }
+  getTileAt(x, y) {
+    var tx = M.floor(x / 8)
+    var ty = M.floor(y / 8)
+    return map.get(tx, ty)
+  }
   isSolidAt(x, y) {
     var tx = M.floor(x / 8)
     var ty = M.floor(y / 8)
     return map.get(tx, ty).solid
   }
 
-  isColliding(actor) {
+  isColliding(original, actor) {
     var colliding = false
     var pos = actor.pos
     var size = actor.size - Vec.new(1, 1)
-    var solid = isSolidAt(pos.x, pos.y) ||
-      isSolidAt(pos.x + size.x, pos.y + size.y) ||
-      isSolidAt(pos.x, pos.y + size.y) ||
-      isSolidAt(pos.x + size.x, pos.y)
 
-    if (!solid) {
+    var tiles = [
+      pos,
+      pos + size,
+      Vec.new(pos.x, pos.y + size.y),
+      Vec.new(pos.x + size.x, pos.y)
+    ]
+
+    var isSolid = false
+    tiles.each { |tilePos|
+      var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
+      var tile = getTileAt(tilePos)
+      if (tile.oneway && (original.pos + size).y > tileTop) {
+        return
+      }
+      isSolid = isSolid || tile.solid
+    }
+
+
+    if (!isSolid) {
       solids.where {|solid| solid.collidable }.each {|solid|
+        if (solid.oneway && (original.pos + original.size).y > solid.pos.y) {
+          return
+        }
         colliding = colliding || Entity.isOverlapping(actor, solid)
       }
     }
 
-    return solid || colliding
+    return isSolid || colliding
   }
 
   isOnGround(actor) {
     var riding = false
     var pos = actor.pos
     var size = actor.size - Vec.new(1, 0)
-    var solid = isSolidAt(pos.x + size.x, pos.y + size.y) ||
-      isSolidAt(pos.x, pos.y + size.y)
-    // TODO: Check tilemap
+    var tiles = [
+      pos + size,
+      Vec.new(pos.x, pos.y + size.y)
+    ]
+
+    var solid = false
+    tiles.each { |tilePos|
+      var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
+      var tile = getTileAt(tilePos)
+      if (tile.oneway && (pos + size).y > tileTop) {
+        return
+      }
+      solid = solid || tile.solid
+    }
     if (!solid) {
       solids.where {|solid| solid.collidable }.each {|solid|
+        if (solid.oneway && (pos + size).y > solid.pos.y) {
+          return
+        }
         riding = riding || actor.isAbove(solid)
       }
     }
