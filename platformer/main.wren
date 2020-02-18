@@ -291,6 +291,9 @@ class Block is Solid {
     Canvas.rectfill(pos.x, pos.y, size.x, size.y, _color)
   }
   update() {
+    if (pos.x < 8 * TILE_SIZE || pos.x >= 14 * TILE_SIZE) {
+      _vel.x = -_vel.x
+    }
     move(_vel)
   }
 }
@@ -328,15 +331,20 @@ class Player is Actor {
       if (_jumpButton.update()) {
         acc.y = -JUMP
       }
-      var ground = [
+      var groundTiles = [
         world.getTileAt(pos.x + size.x, pos.y + size.y),
         world.getTileAt(pos.x, pos.y + size.y)
       ]
       if (Keyboard.isKeyDown("down")) {
-        if (ground.all {|tile| tile.type != 0 && (!tile.solid || tile.oneway) } ||
-          world.solids.where {|solid| isAbove(solid) }.all {|solid| solid.oneway }) {
+        var groundSolids = world.solids.where {|solid| isAbove(solid) }
+        var fallthrough = false
+        if (groundSolids.count > 0) {
+          fallthrough = groundSolids.all {|solid| solid.collidable && solid.oneway }
+        } else {
+          fallthrough = groundTiles.all {|tile| (tile.type == 0 || tile.oneway) }
+        }
+        if (fallthrough) {
           pos.y = pos.y + 1
-          // onGround = false
           onGround = world.isOnGround(this)
         }
       }
@@ -363,7 +371,7 @@ class Player is Actor {
 
 class World {
   construct init() {
-    _solids = [Block.new(Color.orange, Vec.new(0, -0.1))]
+    _solids = [Block.new(Color.orange, Vec.new(-0.1, 0))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
     _tilemap = BasicTilemap.init(16, 16)
@@ -374,8 +382,8 @@ class World {
   }
 
   update() {
-    _solids.each {|solid| solid.update() }
     _actors.each {|actor| actor.update() }
+    _solids.each {|solid| solid.update() }
   }
 
   draw(alpha) {
