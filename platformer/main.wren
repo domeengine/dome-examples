@@ -426,7 +426,7 @@ class World {
     tiles.each { |tilePos|
       var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
       var tile = getTileAt(tilePos)
-      if (tile.oneway && (original.pos + size).y > tileTop) {
+      if (tile.oneway && (original.pos + original.size).y > tileTop) {
         return
       }
       isSolid = isSolid || tile.solid
