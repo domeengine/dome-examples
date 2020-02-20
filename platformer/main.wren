@@ -1,8 +1,10 @@
-import "dome" for Process
-import "graphics" for Canvas, Color
-import "input" for Keyboard
+import "dome" for Process, Window
+import "graphics" for Canvas, Color, ImageData
+import "input" for Keyboard, Mouse
 import "math" for Vec, M
-import "./keys" for Key
+
+import "./keys" for Key, MouseButton
+import "./model" for Tile, BasicTileMap
 
 // Physics Constants
 var JUMP = 3
@@ -16,52 +18,30 @@ var CHANGE_FORCE = 0.5
 // World space
 var TILE_SIZE = 8
 
-class Tile {
-  construct new(type, solid) {
-    _type = type
-    _solid = solid
-    _oneway = false
+class TileMapRenderer {
+  construct init(tilemap, spritesheet) {
+    _map = tilemap
+    _spritesheet = spritesheet
   }
-  construct new(type, solid, oneway) {
-    _type = type
-    _solid = solid
-    _oneway = oneway
+
+  draw() {
+    for (y in 0..._map.width) {
+      for (x in 0..._map.width) {
+        var tile = _map.get(x, y).type
+        if (tile != null) {
+          var tileX = (tile % (_spritesheet.width / TILE_SIZE)).floor
+          var tileY = (tile / (_spritesheet.height / TILE_SIZE)).floor
+          _spritesheet.transform({
+            "srcX": (TILE_SIZE) * (tileX + 1),
+            "srcY": (TILE_SIZE) * (tileY + 1),
+            "srcW": TILE_SIZE,
+            "srcH": TILE_SIZE
+          }).draw(x * TILE_SIZE, y * TILE_SIZE)
+        }
+      }
+    }
   }
-  type { _type }
-  solid { _solid }
-  oneway { _oneway }
 }
-
-class BasicTilemap {
-  construct init(width, height) {
-    _width = width
-    _height = height
-    _tiles = List.filled(_width * _height, Tile.new(0, false))
-  }
-
-  get(vec) { get(vec.x, vec.y) }
-  get(x, y) {
-    if (x < 0 || x >= width || y < 0 || y >= height) {
-      return Tile.new(null, true)
-    }
-    return _tiles[_height * y + x]
-  }
-
-  set(vec, tile) { setTile(vec.x, vec.y, tile) }
-  set(x, y, tile) {
-    if (x < 0 || x >= width || y < 0 || y >= height) {
-      Fiber.abort("Tile index out of bounds (%(x),%(y))")
-    }
-    if (!tile is Tile) {
-      Fiber.abort("Only instances of Tile can be added to the tilemap")
-    }
-    _tiles[_height * y + x] = tile
-  }
-
-  width { _width }
-  height { _height }
-}
-
 
 // Actions
 var ActorSquish = Fn.new {|actor|
@@ -374,20 +354,47 @@ class World {
     _solids = [Block.new(Color.orange, Vec.new(-0.1, 0))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
-    _tilemap = BasicTilemap.init(16, 16)
+    _tilemap = BasicTileMap.init(16, 16)
     for (x in 0..._tilemap.width) {
       _tilemap.set(x, _tilemap.height - 1, Tile.new(1, true))
     }
     _tilemap.set(4, 13, Tile.new(2, true, true))
+    _spritesheet = ImageData.loadFromFile("./tileset.png")
+    _renderer = TileMapRenderer.init(_tilemap, _spritesheet)
+
+    _mouseClick = MouseButton.new("left", true)
+    _mouseReset = MouseButton.new("right", true)
   }
 
   update() {
     _actors.each {|actor| actor.update() }
     _solids.each {|solid| solid.update() }
+
+    if (_mouseClick.update()) {
+      var x = M.floor(Mouse.x / TILE_SIZE)
+      var y = M.floor(Mouse.y / TILE_SIZE)
+      var type = _tilemap.get(x, y).type
+      if (type == null) {
+        type = 0
+      } else {
+        type = type + 1
+      }
+      type = type % (_spritesheet.width * _spritesheet.height / (TILE_SIZE * TILE_SIZE))
+      _tilemap.set(x, y, Tile.new(type, type != null))
+    }
+    if (_mouseReset.update()) {
+      var x = M.floor(Mouse.x / TILE_SIZE)
+      var y = M.floor(Mouse.y / TILE_SIZE)
+      var type = _tilemap.get(x, y).type
+      _tilemap.clear(x, y)
+    }
   }
 
   draw(alpha) {
     Canvas.cls(Color.blue)
+
+
+    /*
     for (y in 0..._tilemap.height) {
       for (x in 0..._tilemap.width) {
         var tile = _tilemap.get(x, y)
@@ -400,10 +407,15 @@ class World {
         }
       }
     }
+    */
+    _renderer.draw()
 
     // Draw entities
     _solids.each {|solid| solid.draw(alpha) }
     _actors.each {|actor| actor.draw(alpha) }
+    var x = M.floor(Mouse.x / TILE_SIZE) * TILE_SIZE
+    var y = M.floor(Mouse.y / TILE_SIZE) * TILE_SIZE
+    Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
   }
 
   getTileAt(vec) { getTileAt(vec.x, vec.y) }
@@ -491,7 +503,9 @@ class World {
 class Game {
     static init() {
       __world = World.init()
+      Window.resize(4*128, 4*128)
       Canvas.resize(128, 128)
+      Mouse.hidden = true
     }
     static update() {
       if (Keyboard.isKeyDown("escape")) {

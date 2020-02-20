@@ -1,4 +1,4 @@
-import "input" for Keyboard
+import "input" for Keyboard, Mouse
 
 class Key {
   construct new(key, result) {
@@ -16,11 +16,15 @@ class Key {
     _result = result
   }
 
+  getButtonState() {
+    return Keyboard.isKeyDown(name)
+  }
+
   name { _name }
   result { _result }
 
   update() {
-    var isPressed = Keyboard.isKeyDown(_name)
+    var isPressed = getButtonState()
     var fire
     if (_repeatable) {
       fire = isPressed && (_counter == 0)
@@ -37,5 +41,15 @@ class Key {
     }
 
     return fire
+  }
+}
+
+class MouseButton is Key {
+  construct new(key, result) {
+    super(key, result, false)
+  }
+
+  getButtonState() {
+    return Mouse.isButtonPressed(name)
   }
 }
