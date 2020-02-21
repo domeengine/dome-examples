@@ -34,25 +34,33 @@ class TileMapEditor {
     _back = Key.new("-", true, true)
     _save = Key.new("s", true, false)
     _selected = 0
+    _offset = 0
   }
 
   update() {
-    if (_next.update()) {
-      _selected = _selected + 1
-    }
-    if (_back.update()) {
-      _selected = _selected - 1
-    }
-    _selected = M.abs(_selected)
     var x = M.floor(Mouse.x / TILE_SIZE)
     var y = M.floor(Mouse.y / TILE_SIZE)
     if (Keyboard.isKeyDown("left command")) {
+      var x = M.floor((Mouse.x - _offset) / TILE_SIZE)
       if (_mouseClick.update()) {
         if (x < _sheetWidth && y < _sheetHeight) {
           _selected = x + y * _sheetWidth
         }
       }
+      if (_next.update()) {
+        _offset = _offset + TILE_SIZE
+      }
+      if (_back.update()) {
+        _offset = _offset - TILE_SIZE
+      }
     } else {
+      if (_next.update()) {
+        _selected = _selected + 1
+      }
+      if (_back.update()) {
+        _selected = _selected - 1
+      }
+      _selected = M.abs(_selected)
       if (_mouseClick.update()) {
         var type = _selected
         _tilemap.set(x, y, Tile.new(type, type != null))
@@ -76,7 +84,7 @@ class TileMapEditor {
     var tileY = (_selected / _sheetWidth).floor
 
     if (Keyboard.isKeyDown("left command")) {
-      _spritesheet.draw(0, 0)
+      _spritesheet.draw(_offset, 0)
     } else {
       _spritesheet.transform({
         "srcX": (TILE_SIZE) * (tileX),
