@@ -3,11 +3,13 @@ import "graphics" for Canvas, Color, ImageData
 import "input" for Keyboard, Mouse
 import "math" for Vec, M
 
+import "io" for FileSystem
+
 import "./keys" for Key, MouseButton
 import "./model" for Tile, BasicTileMap
 
 // Physics Constants
-var JUMP = 3
+var JUMP = 3.1
 var GRAVITY = 0.2
 var FRICTION = 0.16
 
@@ -18,22 +20,95 @@ var CHANGE_FORCE = 0.5
 // World space
 var TILE_SIZE = 8
 
+class TileMapEditor {
+
+  construct init(map, spritesheet) {
+    _tilemap = map
+    _spritesheet = spritesheet
+    _sheetWidth = (_spritesheet.width / TILE_SIZE)
+    _sheetHeight = (_spritesheet.height / TILE_SIZE)
+
+    _mouseClick = MouseButton.new("left", true, true)
+    _mouseReset = MouseButton.new("right", true, true)
+    _next = Key.new("=", true, true)
+    _back = Key.new("-", true, true)
+    _save = Key.new("s", true, false)
+    _selected = 0
+  }
+
+  update() {
+    if (_next.update()) {
+      _selected = _selected + 1
+    }
+    if (_back.update()) {
+      _selected = _selected - 1
+    }
+    _selected = M.abs(_selected)
+    var x = M.floor(Mouse.x / TILE_SIZE)
+    var y = M.floor(Mouse.y / TILE_SIZE)
+    if (Keyboard.isKeyDown("left command")) {
+      if (_mouseClick.update()) {
+        if (x < _sheetWidth && y < _sheetHeight) {
+          _selected = x + y * _sheetWidth
+        }
+      }
+    } else {
+      if (_mouseClick.update()) {
+        var type = _selected
+        _tilemap.set(x, y, Tile.new(type, type != null))
+      }
+      if (_mouseReset.update()) {
+        var type = _tilemap.get(x, y).type
+        _tilemap.clear(x, y)
+      }
+
+      if (_save.update()) {
+        _tilemap.save("map.csv")
+      }
+    }
+
+  }
+
+  draw() {
+    var x = M.floor(Mouse.x / TILE_SIZE) * TILE_SIZE
+    var y = M.floor(Mouse.y / TILE_SIZE) * TILE_SIZE
+    var tileX = (_selected % _sheetWidth).floor
+    var tileY = (_selected / _sheetWidth).floor
+
+    if (Keyboard.isKeyDown("left command")) {
+      _spritesheet.draw(0, 0)
+    } else {
+      _spritesheet.transform({
+        "srcX": (TILE_SIZE) * (tileX),
+        "srcY": (TILE_SIZE) * (tileY),
+        "srcW": TILE_SIZE,
+        "srcH": TILE_SIZE
+      }).draw(x, y)
+    }
+
+
+    Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
+  }
+}
+
 class TileMapRenderer {
   construct init(tilemap, spritesheet) {
     _map = tilemap
     _spritesheet = spritesheet
+    _sheetWidth = (_spritesheet.width / TILE_SIZE)
+    _sheetHeight = (_spritesheet.height / TILE_SIZE)
   }
 
   draw() {
-    for (y in 0..._map.width) {
+    for (y in 0..._map.height) {
       for (x in 0..._map.width) {
         var tile = _map.get(x, y).type
         if (tile != null) {
-          var tileX = (tile % (_spritesheet.width / TILE_SIZE)).floor
-          var tileY = (tile / (_spritesheet.height / TILE_SIZE)).floor
+          var tileX = (tile % _sheetWidth).floor
+          var tileY = (tile / _sheetWidth).floor
           _spritesheet.transform({
-            "srcX": (TILE_SIZE) * (tileX + 1),
-            "srcY": (TILE_SIZE) * (tileY + 1),
+            "srcX": (TILE_SIZE) * (tileX),
+            "srcY": (TILE_SIZE) * (tileY),
             "srcW": TILE_SIZE,
             "srcH": TILE_SIZE
           }).draw(x * TILE_SIZE, y * TILE_SIZE)
@@ -350,48 +425,39 @@ class Player is Actor {
 }
 
 class World {
-  construct init() {
+  construct init(map) {
+    _tilemap = map
     _solids = [Block.new(Color.orange, Vec.new(-0.1, 0))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
-    _tilemap = BasicTileMap.init(16, 16)
+//    _tilemap = BasicTileMap.init(16, 16)
+    /*
     for (x in 0..._tilemap.width) {
-      _tilemap.set(x, _tilemap.height - 1, Tile.new(1, true))
+      _tilemap.set(x, _tilemap.height - 1, Tile.new(25, true))
     }
     _tilemap.set(4, 13, Tile.new(2, true, true))
+    */
     _spritesheet = ImageData.loadFromFile("./tileset.png")
+    _sheetWidth = (_spritesheet.width / TILE_SIZE)
+    _sheetHeight = (_spritesheet.height / TILE_SIZE)
     _renderer = TileMapRenderer.init(_tilemap, _spritesheet)
+    _editor = TileMapEditor.init(_tilemap, _spritesheet)
 
-    _mouseClick = MouseButton.new("left", true)
-    _mouseReset = MouseButton.new("right", true)
+
+
+    _selected = 0
   }
 
   update() {
     _actors.each {|actor| actor.update() }
     _solids.each {|solid| solid.update() }
+    _editor.update()
 
-    if (_mouseClick.update()) {
-      var x = M.floor(Mouse.x / TILE_SIZE)
-      var y = M.floor(Mouse.y / TILE_SIZE)
-      var type = _tilemap.get(x, y).type
-      if (type == null) {
-        type = 0
-      } else {
-        type = type + 1
-      }
-      type = type % (_spritesheet.width * _spritesheet.height / (TILE_SIZE * TILE_SIZE))
-      _tilemap.set(x, y, Tile.new(type, type != null))
-    }
-    if (_mouseReset.update()) {
-      var x = M.floor(Mouse.x / TILE_SIZE)
-      var y = M.floor(Mouse.y / TILE_SIZE)
-      var type = _tilemap.get(x, y).type
-      _tilemap.clear(x, y)
-    }
   }
 
   draw(alpha) {
-    Canvas.cls(Color.blue)
+    Canvas.cls(Color.new("2e485b"))
+    // Canvas.cls()
 
 
     /*
@@ -413,9 +479,8 @@ class World {
     // Draw entities
     _solids.each {|solid| solid.draw(alpha) }
     _actors.each {|actor| actor.draw(alpha) }
-    var x = M.floor(Mouse.x / TILE_SIZE) * TILE_SIZE
-    var y = M.floor(Mouse.y / TILE_SIZE) * TILE_SIZE
-    Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
+
+    _editor.draw()
   }
 
   getTileAt(vec) { getTileAt(vec.x, vec.y) }
@@ -502,7 +567,8 @@ class World {
 
 class Game {
     static init() {
-      __world = World.init()
+      var map = BasicTileMap.fromFile("map.csv")
+      __world = World.init(map)
       Window.resize(4*128, 4*128)
       Canvas.resize(128, 128)
       Mouse.hidden = true

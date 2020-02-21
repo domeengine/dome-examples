@@ -45,6 +45,9 @@ class Key {
 }
 
 class MouseButton is Key {
+  construct new(key, result, repeat) {
+    super(key, result, repeat)
+  }
   construct new(key, result) {
     super(key, result, false)
   }
