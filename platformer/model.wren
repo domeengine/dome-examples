@@ -36,8 +36,8 @@ class BasicTileMap {
     _tiles = List.filled(_width * _height, EMPTY_TILE)
   }
   construct fromFile(filename) {
-    var err = Fiber.new {
-      var mapFile = FileSystem.load(filename)
+    _filename = filename
+      var mapFile = FileSystem.load(filename).trim()
       var rows = mapFile.split("\n")
       _height = rows.count
       _width = 0
@@ -53,19 +53,15 @@ class BasicTileMap {
         for (x in 0..._width) {
           var pos = y * _width + x
           var type = Num.fromString(map[pos])
-          System.write(type)
-          if (type < 0) {
+          if (type is Num && type < 0) {
             type = null
           }
-          System.write(",")
           this.set(x, y, Tile.new(type, type != null))
         }
-        System.print()
       }
-    }.try()
-    System.print(err)
   }
 
+  save() { save(_filename) }
   save(filename) {
     var map = []
     for (y in 0...this.height) {
@@ -81,7 +77,7 @@ class BasicTileMap {
     }
     Fiber.new {
       FileSystem.save(filename, map.join("\n"))
-      System.print(map.join("\n"))
+      // System.print(map.join("\n"))
       System.print("Saved!")
     }.try()
   }
