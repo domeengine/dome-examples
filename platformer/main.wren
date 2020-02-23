@@ -6,7 +6,7 @@ import "math" for Vec, M
 import "io" for FileSystem
 
 import "./keys" for Key, MouseButton
-import "./model" for Tile, BasicTileMap
+import "./model" for Tile, BasicTileMap, Level
 
 // Physics Constants
 var JUMP = 3.1
@@ -17,7 +17,7 @@ var MAX_SPEED = 1
 var MOVE_FORCE = 0.08
 var CHANGE_FORCE = 0.5
 
-// World space
+//World space
 var TILE_SIZE = 8
 
 class TileMapEditor {
@@ -29,8 +29,9 @@ class TileMapEditor {
     _sheetHeight = (_spritesheet.height / TILE_SIZE)
   }
 
-  construct init(maps, spritesheets) {
-    _maps = maps
+  construct init(level, spritesheets) {
+    _level = level
+    _maps = level.maps
     _layer = 0
     _spritesheets = spritesheets
     switchLayer(0)
@@ -91,7 +92,8 @@ class TileMapEditor {
     }
 
     if (_save.update()) {
-      _maps.each {|map| map.save() }
+      _level.save()
+      // _maps.each {|map| map.save() }
     }
   }
 
@@ -454,19 +456,20 @@ class Player is Actor {
 }
 
 class World {
-  construct init(maps, spritesheets, solidMapIndex) {
-    _maps = maps
+  construct init(level) {
+    _maps = level.maps
+    var solidMapIndex = level.solidIndex
     _tilemap = _maps[solidMapIndex]
     _solids = [Block.new(Color.orange, Vec.new(-0.1, 0))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
 
-    _spritesheets = spritesheets
+    _spritesheets = level.spritesheets.map {|name| ImageData.loadFromFile(name) }.toList
     _renderers = []
-    for (layer in 0...maps.count) {
+    for (layer in 0...level.maps.count) {
       _renderers.add(TileMapRenderer.init(_maps[layer], _spritesheets[layer]))
     }
-    _editor = TileMapEditor.init(maps, _spritesheets)
+    _editor = TileMapEditor.init(level, _spritesheets)
   }
 
   update() {
@@ -571,17 +574,13 @@ class World {
 
 class Game {
     static init() {
-      var bg = BasicTileMap.fromFile("bg.csv")
-      var map = BasicTileMap.fromFile("map.csv")
-      __spritesheets = [
-        ImageData.loadFromFile("./tileset.png"),
-        ImageData.loadFromFile("./cute.png")
-      ]
-      __world = World.init([bg, map], __spritesheets, 1)
       Window.resize(4*128, 4*128)
       Canvas.resize(128, 128)
       Mouse.hidden = true
+      var level = Level.fromFile("level.map")
+      __world = World.init(level)
     }
+
     static update() {
       if (Keyboard.isKeyDown("escape")) {
         Process.exit()
