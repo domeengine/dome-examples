@@ -113,7 +113,6 @@ class TileMapEditor {
     if (Keyboard.isKeyDown("left shift")) {
       Canvas.rectfill(0, 0, Canvas.width, Canvas.height, Color.black)
       _renderers[_layer].draw()
-      Canvas.print(_layer.toString, 0, 0, Color.white)
     }
     if (Keyboard.isKeyDown("left command")) {
       Canvas.rectfill(0, 0, _spritesheet.width, _spritesheet.height, Color.darkgray)
@@ -126,6 +125,10 @@ class TileMapEditor {
         "srcW": TILE_SIZE,
         "srcH": TILE_SIZE
       }).draw(x, y)
+    }
+    if (Keyboard.isKeyDown("left command") ||
+      Keyboard.isKeyDown("left shift")) {
+      Canvas.print(_layer.toString, 0, 0, Color.white)
     }
     Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
   }
@@ -466,6 +469,7 @@ class Player is Actor {
 
 class World {
   construct init(level) {
+    _level = level
     _maps = level.maps
 
     _solidMapIndex = level.solidIndex
@@ -489,9 +493,7 @@ class World {
   }
 
   draw(alpha) {
-    Canvas.cls(Color.new("2e485b"))
-    // Canvas.cls()
-    // _renderers.each {|renderer| renderer.draw() }
+    Canvas.cls(_level.backgroundColor)
     for (layer in 0..._solidMapIndex) {
       _renderers[layer].draw()
     }

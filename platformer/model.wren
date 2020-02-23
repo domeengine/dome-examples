@@ -1,4 +1,5 @@
 import "math" for M
+import "graphics" for Color
 import "io" for FileSystem
 
 var ERROR = -1
@@ -15,6 +16,7 @@ class Level {
     _maps = []
     _spritesheets = []
     _solidIndex = 0
+    _background = Color.black
     var solid = false
     var mapWidth = 0
     var mapHeight = 0
@@ -23,11 +25,13 @@ class Level {
     var layerTileMap = []
 
     lines.each {|line|
+      var lineArray = line.trim().split(" ")
       if (mode == ERROR) {
-        Fiber.abort("Level file is invalid")
       } else if (mode == NONE) {
         if (line.trim().count == 0) {
           return
+        } else if (lineArray[0] == "BACKGROUND") {
+          _backgroundColor = Color.new(lineArray[1])
         } else if (line.trim() == "LAYER") {
           mode = LAYER
           solid = false
@@ -36,7 +40,7 @@ class Level {
           layerSpritesheet = null
           layerTileMap = []
         } else {
-          mode = ERROR
+          Fiber.abort("Level file is invalid")
         }
       } else if (mode == LAYER) {
         if (line.trim() == "SOLID") {
@@ -62,14 +66,13 @@ class Level {
             }
             _spritesheets.add(layerSpritesheet)
           } else {
-            mode = ERROR
+            Fiber.abort("Level file is invalid")
           }
         } else {
           var row = line.trim()
-          var lineArray = row.split(" ")
           if (lineArray[0] == "SPRITESHEET") {
             layerSpritesheet = lineArray[1]
-          } else if (line.trim().count > 0) {
+          } else if (row.count > 0) {
             // Assume it's fine
             var cols = row.split(",")
             mapWidth = M.max(mapWidth, cols.count)
@@ -78,7 +81,7 @@ class Level {
           }
         }
       } else {
-        mode = ERROR
+        Fiber.abort("Invalid")
       }
     }
   }
@@ -86,6 +89,20 @@ class Level {
   save() { save(_filename) }
   save(filename) {
     var lines = []
+    var toHex = Fn.new {|dec|
+      if (dec < 10) {
+        return String.fromByte(dec + 48)
+      } else if (dec < 16) {
+        return String.fromByte((dec - 10) + 65)
+      }
+    }
+    var rA = toHex.call(backgroundColor.r >> 4)
+    var rB = toHex.call(backgroundColor.r & 15)
+    var gA = toHex.call(backgroundColor.g >> 4)
+    var gB = toHex.call(backgroundColor.g & 15)
+    var bA = toHex.call(backgroundColor.b >> 4)
+    var bB = toHex.call(backgroundColor.b & 15)
+    lines.add("BACKGROUND #%(rA)%(rB)%(gA)%(gB)%(bA)%(bB)")
     for (layer in 0...maps.count) {
       var map = maps[layer]
       var spritesheet = spritesheets[layer]
@@ -109,12 +126,16 @@ class Level {
 
       lines.add("LAYER END")
     }
-    Fiber.new {
+    var err = Fiber.new {
       FileSystem.save(filename, lines.join("\n"))
       System.print("Saved!")
     }.try()
+    if (err) {
+      Fiber.abort(err)
+    }
   }
 
+  backgroundColor { _backgroundColor }
   solidIndex { _solidIndex }
   maps { _maps }
   spritesheets { _spritesheets }
