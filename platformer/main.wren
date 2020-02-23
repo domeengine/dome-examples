@@ -56,7 +56,7 @@ class TileMapEditor {
     var x = M.floor(Mouse.x / TILE_SIZE)
     var y = M.floor(Mouse.y / TILE_SIZE)
     if (Keyboard.isKeyDown("left command") ||
-      Keyboard.isKeyDown("left ctrl")) {
+      Keyboard.isKeyDown("left shift")) {
       if (_forward.update()) {
         _layer = _layer + 1
       }
@@ -110,7 +110,7 @@ class TileMapEditor {
     var tileY = (_selected / _sheetWidth).floor
 
 
-    if (Keyboard.isKeyDown("left ctrl")) {
+    if (Keyboard.isKeyDown("left shift")) {
       Canvas.rectfill(0, 0, Canvas.width, Canvas.height, Color.black)
       _renderers[_layer].draw()
       Canvas.print(_layer.toString, 0, 0, Color.white)
