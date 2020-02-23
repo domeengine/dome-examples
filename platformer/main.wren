@@ -34,6 +34,10 @@ class TileMapEditor {
     _maps = level.maps
     _layer = 0
     _spritesheets = spritesheets
+    _renderers = List.filled(level.maps.count, null)
+    for (layer in 0...level.maps.count) {
+      _renderers[layer] = TileMapRenderer.init(_maps[layer], _spritesheets[layer])
+    }
     switchLayer(0)
 
     _mouseClick = MouseButton.new("left", true, true)
@@ -51,13 +55,8 @@ class TileMapEditor {
     _tilemap = _maps[_layer]
     var x = M.floor(Mouse.x / TILE_SIZE)
     var y = M.floor(Mouse.y / TILE_SIZE)
-    if (Keyboard.isKeyDown("left command")) {
-      var x = M.floor((Mouse.x - _offset) / TILE_SIZE)
-      if (Mouse.isButtonPressed("left")) {
-        if (x < _sheetWidth && y < _sheetHeight) {
-          _selected = x + y * _sheetWidth
-        }
-      }
+    if (Keyboard.isKeyDown("left command") ||
+      Keyboard.isKeyDown("left ctrl")) {
       if (_forward.update()) {
         _layer = _layer + 1
       }
@@ -66,6 +65,14 @@ class TileMapEditor {
       }
       _layer = M.mid(0, _layer, _maps.count - 1)
       switchLayer(_layer)
+    }
+    if (Keyboard.isKeyDown("left command")) {
+      var x = M.floor((Mouse.x - _offset) / TILE_SIZE)
+      if (Mouse.isButtonPressed("left")) {
+        if (x < _sheetWidth && y < _sheetHeight) {
+          _selected = x + y * _sheetWidth
+        }
+      }
       if (_next.update()) {
         _offset = _offset - TILE_SIZE
       }
@@ -93,7 +100,6 @@ class TileMapEditor {
 
     if (_save.update()) {
       _level.save()
-      // _maps.each {|map| map.save() }
     }
   }
 
@@ -103,6 +109,12 @@ class TileMapEditor {
     var tileX = (_selected % _sheetWidth).floor
     var tileY = (_selected / _sheetWidth).floor
 
+
+    if (Keyboard.isKeyDown("left ctrl")) {
+      Canvas.rectfill(0, 0, Canvas.width, Canvas.height, Color.black)
+      _renderers[_layer].draw()
+      Canvas.print(_layer.toString, 0, 0, Color.white)
+    }
     if (Keyboard.isKeyDown("left command")) {
       Canvas.rectfill(0, 0, _spritesheet.width, _spritesheet.height, Color.darkgray)
       _spritesheet.draw(_offset, 0)
@@ -115,10 +127,7 @@ class TileMapEditor {
         "srcH": TILE_SIZE
       }).draw(x, y)
     }
-
-
     Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
-    Canvas.print(_layer.toString, 0, 0, Color.white)
   }
 }
 
@@ -458,8 +467,9 @@ class Player is Actor {
 class World {
   construct init(level) {
     _maps = level.maps
-    var solidMapIndex = level.solidIndex
-    _tilemap = _maps[solidMapIndex]
+
+    _solidMapIndex = level.solidIndex
+    _tilemap = _maps[_solidMapIndex]
     _solids = [Block.new(Color.orange, Vec.new(-0.1, 0))]
     _actors = [Player.new()]
     (_solids + _actors).each {|entity| entity.bindWorld(this) }
@@ -481,11 +491,17 @@ class World {
   draw(alpha) {
     Canvas.cls(Color.new("2e485b"))
     // Canvas.cls()
-    _renderers.each {|renderer| renderer.draw() }
+    // _renderers.each {|renderer| renderer.draw() }
+    for (layer in 0..._solidMapIndex) {
+      _renderers[layer].draw()
+    }
 
     // Draw entities
     _solids.each {|solid| solid.draw(alpha) }
     _actors.each {|actor| actor.draw(alpha) }
+    for (layer in _solidMapIndex..._renderers.count) {
+      _renderers[layer].draw()
+    }
 
     _editor.draw()
   }
