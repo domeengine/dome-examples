@@ -39,29 +39,21 @@ class Level {
           var tilesetData = _tilesetProperties[tilesetName]
           var data = {}
 
-          System.write("TILE ")
-          System.write(index)
-          System.write(" ")
           for (prop in lineArray.skip(2)) {
             data[prop] = true
-            System.write(prop)
-            System.write(" ")
           }
           tilesetData[index] = data
-          System.print()
         } else if (lineArray[0].trim() == "DEFAULT") {
           var index = -1
           var tilesetData = _tilesetProperties[tilesetName]
           var data = {}
 
-          System.write("DEFAULT ")
           for (prop in lineArray.skip(1)) {
             data[prop] = true
-            System.write(prop)
-            System.write(" ")
           }
           tilesetData[index] = data
-          System.print()
+        } else {
+          Fiber.abort("Invalid")
         }
       } else if (mode == NONE) {
         if (line.trim().count == 0) {
@@ -70,7 +62,6 @@ class Level {
           mode = TILESET
           tilesetName = lineArray[1]
           _tilesetProperties[tilesetName] = {}
-          System.print("TILESET %(tilesetName)")
         } else if (lineArray[0] == "BACKGROUND") {
           _backgroundColor = Color.new(lineArray[1])
         } else if (line.trim() == "LAYER") {
@@ -92,9 +83,6 @@ class Level {
             var tileMap = BasicTileMap.init(mapWidth, mapHeight)
 
             var tileData = _tilesetProperties[layerSpritesheet] || {}
-            if (tileData.keys.count > 0) {
-              System.print(tileData)
-            }
             for (y in 0...mapHeight) {
               for (x in 0...mapWidth) {
                 var pos = y * mapWidth + x
@@ -150,6 +138,20 @@ class Level {
     var bA = toHex.call(backgroundColor.b >> 4)
     var bB = toHex.call(backgroundColor.b & 15)
     lines.add("BACKGROUND #%(rA)%(rB)%(gA)%(gB)%(bA)%(bB)")
+    for (key in properties.keys) {
+      var data = properties[key]
+      lines.add("TILESET %(key)")
+      for (index in data.keys) {
+        var props = data[index].keys.join(" ")
+        if (index == -1) {
+          lines.add("DEFAULT %(props)")
+        } else {
+          lines.add("TILE %(index) %(props)")
+        }
+      }
+      lines.add("TILESET END")
+    }
+
     for (layer in 0...maps.count) {
       var map = maps[layer]
       var spritesheet = spritesheets[layer]

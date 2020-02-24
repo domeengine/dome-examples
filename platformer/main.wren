@@ -90,7 +90,9 @@ class TileMapEditor {
 
       if (Mouse.isButtonPressed("left")) {
         var type = _selected
-        _tilemap.set(x, y, Tile.new(type, _level.properties[_level.spritesheets[_layer]][type]))
+        var sheetData = _level.properties[_level.spritesheets[_layer]] || {}
+        var tileData = sheetData[type] || {}
+        _tilemap.set(x, y, Tile.new(type, tileData))
       }
       if (_mouseReset.update()) {
         var type = _tilemap.get(x, y).type
@@ -373,7 +375,7 @@ class Solid is Entity {
 class Block is Solid {
   construct new(color, vel) {
     super(
-      Vec.new(8 * TILE_SIZE, 13 * TILE_SIZE),
+      Vec.new(8 * TILE_SIZE, 12 * TILE_SIZE),
       Vec.new(2 * TILE_SIZE, 1 * TILE_SIZE)
     )
     _vel = vel
@@ -439,7 +441,7 @@ class Player is Actor {
         if (groundSolids.count > 0) {
           fallthrough = groundSolids.all {|solid| solid.collidable && solid.oneway }
         } else {
-          fallthrough = groundTiles.all {|tile| (tile.type == 0 || tile.data["oneway"]) }
+          fallthrough = groundTiles.all {|tile| (tile.type == null || tile.data["oneway"]) }
         }
         if (fallthrough) {
           pos.y = pos.y + 1
@@ -494,14 +496,14 @@ class World {
 
   draw(alpha) {
     Canvas.cls(_level.backgroundColor)
-    for (layer in 0..._solidMapIndex) {
+    for (layer in 0.._solidMapIndex) {
       _renderers[layer].draw()
     }
 
     // Draw entities
     _solids.each {|solid| solid.draw(alpha) }
     _actors.each {|actor| actor.draw(alpha) }
-    for (layer in _solidMapIndex..._renderers.count) {
+    for (layer in (_solidMapIndex+1)..._renderers.count) {
       _renderers[layer].draw()
     }
 
