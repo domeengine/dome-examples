@@ -15,14 +15,14 @@ class Level {
     var mode = NONE
 
     _maps = []
-
     _spritesheets = []
     _solidIndex = 0
     _background = Color.black
+    _tilesetProperties = {}
+
     var solid = false
     var mapWidth = 0
     var mapHeight = 0
-    var tilesetProperties = {}
     var tilesetName = null
 
     var layerSpritesheet = null
@@ -36,7 +36,7 @@ class Level {
           mode = NONE
         } else if (lineArray[0].trim() == "TILE") {
           var index = Num.fromString(lineArray[1])
-          var tilesetData = tilesetProperties[tilesetName]
+          var tilesetData = _tilesetProperties[tilesetName]
           var data = {}
 
           System.write("TILE ")
@@ -51,7 +51,7 @@ class Level {
           System.print()
         } else if (lineArray[0].trim() == "DEFAULT") {
           var index = -1
-          var tilesetData = tilesetProperties[tilesetName]
+          var tilesetData = _tilesetProperties[tilesetName]
           var data = {}
 
           System.write("DEFAULT ")
@@ -69,7 +69,7 @@ class Level {
         } else if (lineArray[0] == "TILESET") {
           mode = TILESET
           tilesetName = lineArray[1]
-          tilesetProperties[tilesetName] = {}
+          _tilesetProperties[tilesetName] = {}
           System.print("TILESET %(tilesetName)")
         } else if (lineArray[0] == "BACKGROUND") {
           _backgroundColor = Color.new(lineArray[1])
@@ -91,7 +91,7 @@ class Level {
           if (layerSpritesheet != null && layerTileMap.count > 0) {
             var tileMap = BasicTileMap.init(mapWidth, mapHeight)
 
-            var tileData = tilesetProperties[layerSpritesheet] || {}
+            var tileData = _tilesetProperties[layerSpritesheet] || {}
             if (tileData.keys.count > 0) {
               System.print(tileData)
             }
@@ -186,6 +186,7 @@ class Level {
   solidIndex { _solidIndex }
   maps { _maps }
   spritesheets { _spritesheets }
+  properties { _tilesetProperties }
 }
 
 class Tile {

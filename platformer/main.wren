@@ -90,7 +90,7 @@ class TileMapEditor {
 
       if (Mouse.isButtonPressed("left")) {
         var type = _selected
-        _tilemap.set(x, y, Tile.new(type, {}))
+        _tilemap.set(x, y, Tile.new(type, _level.properties[_level.spritesheets[_layer]][type]))
       }
       if (_mouseReset.update()) {
         var type = _tilemap.get(x, y).type
