@@ -5,6 +5,7 @@ import "io" for FileSystem
 var ERROR = -1
 var NONE = 0
 var LAYER = 1
+var TILESET = 2
 
 class Level {
   construct fromFile(filename) {
@@ -14,12 +15,15 @@ class Level {
     var mode = NONE
 
     _maps = []
+
     _spritesheets = []
     _solidIndex = 0
     _background = Color.black
     var solid = false
     var mapWidth = 0
     var mapHeight = 0
+    var tilesetProperties = {}
+    var tilesetName = null
 
     var layerSpritesheet = null
     var layerTileMap = []
@@ -27,9 +31,46 @@ class Level {
     lines.each {|line|
       var lineArray = line.trim().split(" ")
       if (mode == ERROR) {
+      } else if (mode == TILESET) {
+        if (line.trim() == "TILESET END") {
+          mode = NONE
+        } else if (lineArray[0].trim() == "TILE") {
+          var index = Num.fromString(lineArray[1])
+          var tilesetData = tilesetProperties[tilesetName]
+          var data = {}
+
+          System.write("TILE ")
+          System.write(index)
+          System.write(" ")
+          for (prop in lineArray.skip(2)) {
+            data[prop] = true
+            System.write(prop)
+            System.write(" ")
+          }
+          tilesetData[index] = data
+          System.print()
+        } else if (lineArray[0].trim() == "DEFAULT") {
+          var index = -1
+          var tilesetData = tilesetProperties[tilesetName]
+          var data = {}
+
+          System.write("DEFAULT ")
+          for (prop in lineArray.skip(1)) {
+            data[prop] = true
+            System.write(prop)
+            System.write(" ")
+          }
+          tilesetData[index] = data
+          System.print()
+        }
       } else if (mode == NONE) {
         if (line.trim().count == 0) {
           return
+        } else if (lineArray[0] == "TILESET") {
+          mode = TILESET
+          tilesetName = lineArray[1]
+          tilesetProperties[tilesetName] = {}
+          System.print("TILESET %(tilesetName)")
         } else if (lineArray[0] == "BACKGROUND") {
           _backgroundColor = Color.new(lineArray[1])
         } else if (line.trim() == "LAYER") {
@@ -50,14 +91,20 @@ class Level {
           if (layerSpritesheet != null && layerTileMap.count > 0) {
             var tileMap = BasicTileMap.init(mapWidth, mapHeight)
 
+            var tileData = tilesetProperties[layerSpritesheet] || {}
+            if (tileData.keys.count > 0) {
+              System.print(tileData)
+            }
             for (y in 0...mapHeight) {
               for (x in 0...mapWidth) {
                 var pos = y * mapWidth + x
                 var type = Num.fromString(layerTileMap[pos])
-                if (type is Num && type < 0) {
+                var data = tileData[type] || {}
+                if (type < 0) {
                   type = null
                 }
-                tileMap.set(x, y, Tile.new(type, type != null))
+
+                tileMap.set(x, y, Tile.new(type, data))
               }
             }
             _maps.add(tileMap)
@@ -143,28 +190,22 @@ class Level {
 
 class Tile {
   construct new() {
-    init_(null, false, false)
+    init_(null, {})
   }
   construct new(type) {
-    init_(type, false, false)
+    init_(type, {})
   }
-  construct new(type, solid) {
-    init_(type, solid, false)
-  }
-  construct new(type, solid, oneway) {
-    init_(type, solid, oneway)
+  construct new(type, data) {
+    init_(type, data)
   }
 
-  init_(type, solid, oneway) {
+  init_(type, data) {
     _type = type
-    _solid = solid
-    _oneway = oneway
-
+    _data = data
   }
 
   type { _type }
-  solid { _solid }
-  oneway { _oneway }
+  data { _data }
 }
 
 var EMPTY_TILE = Tile.new()
@@ -183,7 +224,7 @@ class BasicTileMap {
   get(vec) { get(vec.x, vec.y) }
   get(x, y) {
     if (x < 0 || x >= width || y < 0 || y >= height) {
-      return Tile.new(null, true)
+      return Tile.new(null, { "solid": true })
     }
     return _tiles[_height * y + x]
   }

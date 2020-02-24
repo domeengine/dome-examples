@@ -90,7 +90,7 @@ class TileMapEditor {
 
       if (Mouse.isButtonPressed("left")) {
         var type = _selected
-        _tilemap.set(x, y, Tile.new(type, type != null))
+        _tilemap.set(x, y, Tile.new(type, {}))
       }
       if (_mouseReset.update()) {
         var type = _tilemap.get(x, y).type
@@ -439,7 +439,7 @@ class Player is Actor {
         if (groundSolids.count > 0) {
           fallthrough = groundSolids.all {|solid| solid.collidable && solid.oneway }
         } else {
-          fallthrough = groundTiles.all {|tile| (tile.type == 0 || tile.oneway) }
+          fallthrough = groundTiles.all {|tile| (tile.type == 0 || tile.data["oneway"]) }
         }
         if (fallthrough) {
           pos.y = pos.y + 1
@@ -517,7 +517,7 @@ class World {
   isSolidAt(x, y) {
     var tx = M.floor(x / 8)
     var ty = M.floor(y / 8)
-    return map.get(tx, ty).solid
+    return map.get(tx, ty).data["solid"]
   }
 
   isColliding(original, actor) {
@@ -536,10 +536,10 @@ class World {
     tiles.each { |tilePos|
       var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
       var tile = getTileAt(tilePos)
-      if (tile.oneway && (original.pos + original.size).y > tileTop) {
+      if (tile.data["oneway"] && (original.pos + original.size).y > tileTop) {
         return
       }
-      isSolid = isSolid || tile.solid
+      isSolid = isSolid || tile.data["solid"]
     }
 
 
@@ -568,10 +568,10 @@ class World {
     tiles.each { |tilePos|
       var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
       var tile = getTileAt(tilePos)
-      if (tile.oneway && (pos + size).y > tileTop) {
+      if (tile.data["oneway"] && (pos + size).y > tileTop) {
         return
       }
-      solid = solid || tile.solid
+      solid = solid || tile.data["solid"]
     }
     if (!solid) {
       solids.where {|solid| solid.collidable }.each {|solid|
