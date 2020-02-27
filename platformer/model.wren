@@ -232,7 +232,7 @@ class BasicTileMap {
     if (x < 0 || x >= width || y < 0 || y >= height) {
       return Tile.new(null, { "solid": true })
     }
-    return _tiles[_height * y + x]
+    return _tiles[_width * y + x]
   }
 
   set(vec, tile) { setTile(vec.x, vec.y, tile) }
@@ -243,7 +243,7 @@ class BasicTileMap {
     if (!tile is Tile) {
       Fiber.abort("Only instances of Tile can be added to the tilemap")
     }
-    _tiles[_height * y + x] = tile
+    _tiles[_width * y + x] = tile
   }
 
   width { _width }
