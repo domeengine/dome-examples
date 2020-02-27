@@ -2,12 +2,16 @@ BACKGROUND #2E485B
 TILESET cute.png
 TILE 2 solid
 TILE 48 solid oneway
-TILE 65 solid oneway
 TILE 63 solid oneway
-TILE 46 solid oneway
-TILE 64 solid oneway
 TILE 47 solid oneway
 TILE 66 solid oneway
+TILE 65 solid oneway
+TILE 89 hazard
+TILE 70 hazard
+TILE 88 hazard
+TILE 46 solid oneway
+TILE 64 solid oneway
+TILE 69 hazard
 DEFAULT 
 TILE 45 solid oneway
 TILESET END
@@ -28,7 +32,7 @@ SPRITESHEET tileset.png
 76,76,76,76,76,76,103,104,76,76,76,76,76,76,103,104
 118,119,120,121,122,123,145,125,118,119,120,121,122,123,145,145
 139,140,141,145,145,145,145,146,139,140,141,142,143,144,145,145
--1,-1,-1,-1,-1,-1,145,-1,-1,-1,-1,-1,-1,-1,-1,-1
+-1,-1,-1,-1,-1,-1,145,-1,-1,-1,-1,-1,139,139,139,139
 LAYER END
 LAYER
 SPRITESHEET tileset.png
@@ -67,7 +71,7 @@ SOLID
 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
 -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1
-2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
+2,2,2,2,2,2,2,2,2,2,2,2,89,89,89,89
 LAYER END
 LAYER
 SPRITESHEET tileset.png

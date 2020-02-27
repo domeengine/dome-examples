@@ -63,7 +63,7 @@ class Level {
           tilesetName = lineArray[1]
           _tilesetProperties[tilesetName] = {}
         } else if (lineArray[0] == "BACKGROUND") {
-          _backgroundColor = Color.new(lineArray[1])
+          _backgroundColor = Color.hex(lineArray[1])
         } else if (line.trim() == "LAYER") {
           mode = LAYER
           solid = false
@@ -208,7 +208,10 @@ class Tile {
   }
 
   type { _type }
+
   data { _data }
+  [index] { _data[index] }
+  [index]=(v) { _data[index] = v }
 }
 
 var EMPTY_TILE = Tile.new()

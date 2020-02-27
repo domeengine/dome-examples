@@ -63,6 +63,11 @@ class TileMapEditor {
       if (_back.update()) {
         _layer = _layer - 1
       }
+      for (btn in 1.._maps.count) {
+        if (Keyboard.isKeyDown(btn.toString)) {
+          _layer = btn - 1
+        }
+      }
       _layer = M.mid(0, _layer, _maps.count - 1)
       switchLayer(_layer)
     }
@@ -113,7 +118,7 @@ class TileMapEditor {
 
 
     if (Keyboard.isKeyDown("left shift")) {
-      Canvas.rectfill(0, 0, Canvas.width, Canvas.height, Color.black)
+      Canvas.cls(_level.backgroundColor)
       _renderers[_layer].draw()
     }
     if (Keyboard.isKeyDown("left command")) {
@@ -130,7 +135,8 @@ class TileMapEditor {
     }
     if (Keyboard.isKeyDown("left command") ||
       Keyboard.isKeyDown("left shift")) {
-      Canvas.print(_layer.toString, 0, 0, Color.white)
+      Canvas.print((_layer + 1).toString, 0, 0, Color.white)
+      Canvas.print(_selected, 0, _spritesheet.height, Color.white)
     }
     Canvas.rect(x-1, y-1, TILE_SIZE+2, TILE_SIZE+2, Color.red)
   }
@@ -293,11 +299,12 @@ class Solid is Entity {
     super(pos, size)
     _rx = 0
     _ry = 0
-    _collidable = true
-    _oneway = true
+    _data = {
+      "collidable": true,
+      "oneway": true
+    }
   }
-  oneway { _oneway }
-  collidable { _collidable }
+  data { _data }
 
   move(vec) { move(vec.x, vec.y) }
   move(x, y) {
@@ -306,7 +313,7 @@ class Solid is Entity {
     var mx = M.round(_rx)
     var my = M.round(_ry)
     if (mx != 0 || my != 0) {
-      _collidable = false
+      this["collidable"] = false
 
       // x-axis movement first
       if (mx != 0) {
@@ -317,7 +324,7 @@ class Solid is Entity {
         var left = pos.x
         if (mx > 0) {
           world.actors.each {|actor|
-            if (!oneway && Entity.isOverlapping(this, actor)) {
+            if (!this["oneway"] && Entity.isOverlapping(this, actor)) {
               var actorLeft = actor.pos.x
               actor.moveX(right - actorLeft, ActorSquish)
             } else if (riding.contains(actor)) {
@@ -326,7 +333,7 @@ class Solid is Entity {
           }
         } else {
           world.actors.each {|actor|
-            if (!oneway && Entity.isOverlapping(this, actor)) {
+            if (!this["oneway"] && Entity.isOverlapping(this, actor)) {
               var actorRight = actor.pos.x + actor.size.x
               actor.moveX(left - actorRight, ActorSquish)
             } else if (riding.contains(actor)) {
@@ -362,12 +369,14 @@ class Solid is Entity {
         }
       }
     }
-    _collidable = true
+    this["collidable"] = true
   }
 
   getRiding() {
     return world.actors.where {|actor| actor.isAbove(this) }
   }
+  [index] { _data[index] || false }
+  [index]=(v) { _data[index] = v }
 }
 
 // -------- GAME CODE ---------
@@ -439,9 +448,9 @@ class Player is Actor {
         var groundSolids = world.solids.where {|solid| isAbove(solid) }
         var fallthrough = false
         if (groundSolids.count > 0) {
-          fallthrough = groundSolids.all {|solid| solid.collidable && solid.oneway }
+          fallthrough = groundSolids.all {|solid| solid["collidable"] && solid["oneway"] }
         } else {
-          fallthrough = groundTiles.all {|tile| (tile.type == null || tile.data["oneway"]) }
+          fallthrough = groundTiles.all {|tile| (tile.type == null || tile["oneway"]) }
         }
         if (fallthrough) {
           pos.y = pos.y + 1
@@ -454,7 +463,7 @@ class Player is Actor {
       // This must not be 0.5, for rounding purposes
       acc.y = GRAVITY
     } else {
-      // If this is enabled, you can't pass through tiles
+      // If this is enabled, you can't pass through oneway tiles
       // Because it assumes you're on the ground now so you should stop
       // vel.y = 0
     }
@@ -463,6 +472,11 @@ class Player is Actor {
     vel = vel + acc
     vel.x = M.mid(-MAX_SPEED, vel.x, MAX_SPEED)
     super.update()
+
+    //
+    if (world.getOverlappingTiles(this).any {|tile| tile["hazard"] }) {
+      ActorSquish.call(this)
+    }
   }
   draw(alpha) {
     Canvas.rectfill(pos.x, pos.y, size.x, size.y, Color.red)
@@ -517,9 +531,24 @@ class World {
     return map.get(tx, ty)
   }
   isSolidAt(x, y) {
-    var tx = M.floor(x / 8)
-    var ty = M.floor(y / 8)
-    return map.get(tx, ty).data["solid"]
+    return getTileAt(x, y)["solid"]
+  }
+
+  getOverlappingTiles(actor) {
+    var pos = actor.pos
+    var size = actor.size - Vec.new(1, 1)
+
+    var tiles = [
+      pos,
+      pos + size,
+      Vec.new(pos.x, pos.y + size.y),
+      Vec.new(pos.x + size.x, pos.y)
+    ]
+
+    return tiles.map { |tilePos|
+      var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
+      return getTileAt(tilePos)
+    }
   }
 
   isColliding(original, actor) {
@@ -538,16 +567,16 @@ class World {
     tiles.each { |tilePos|
       var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
       var tile = getTileAt(tilePos)
-      if (tile.data["oneway"] && (original.pos + original.size).y > tileTop) {
+      if (tile["oneway"] && (original.pos + original.size).y > tileTop) {
         return
       }
-      isSolid = isSolid || tile.data["solid"]
+      isSolid = isSolid || tile["solid"]
     }
 
 
     if (!isSolid) {
-      solids.where {|solid| solid.collidable }.each {|solid|
-        if (solid.oneway && (original.pos + original.size).y > solid.pos.y) {
+      solids.where {|solid| solid["collidable"] }.each {|solid|
+        if (solid["oneway"] && (original.pos + original.size).y > solid.pos.y) {
           return
         }
         colliding = colliding || Entity.isOverlapping(actor, solid)
@@ -570,14 +599,14 @@ class World {
     tiles.each { |tilePos|
       var tileTop = M.floor(tilePos.y / TILE_SIZE) * TILE_SIZE
       var tile = getTileAt(tilePos)
-      if (tile.data["oneway"] && (pos + size).y > tileTop) {
+      if (tile["oneway"] && (pos + size).y > tileTop) {
         return
       }
-      solid = solid || tile.data["solid"]
+      solid = solid || tile["solid"]
     }
     if (!solid) {
-      solids.where {|solid| solid.collidable }.each {|solid|
-        if (solid.oneway && (pos + size).y > solid.pos.y) {
+      solids.where {|solid| solid["collidable"] }.each {|solid|
+        if (solid["oneway"] && (pos + size).y > solid.pos.y) {
           return
         }
         riding = riding || actor.isAbove(solid)
@@ -592,6 +621,65 @@ class World {
   solids { _solids }
 }
 
+class FilePicker {
+  construct open(path) {
+    navigate(path)
+    _offset = 0
+    _up = Key.new("up", true, true)
+    _down = Key.new("down", true, true)
+    _enter = Key.new("space", true, true)
+    _pos = 0
+  }
+
+  navigate(path) {
+    _path = path
+    _directories = [".."] + FileSystem.listDirectories(path).skip(1).where {|name| !name.startsWith(".") }.toList
+    _files = FileSystem.listFiles(path).where {|name| !name.startsWith(".") }.toList
+  }
+
+  update() {
+    if (_up.update()) {
+      _pos = _pos - 1
+    }
+    if (_down.update()) {
+      _pos = _pos + 1
+    }
+    var items = (_directories + _files)
+    _pos = M.min(items.count - 1, _pos)
+    var selection = items[_pos]
+    if (_enter.update()) {
+      if (_directories.contains(selection)) {
+        _path = _path + selection + "/"
+        System.print(_path)
+        navigate(_path)
+      }
+    }
+  }
+
+  draw(alpha) {
+    Canvas.cls()
+    var y = 0
+    _directories.each {|name|
+      if (_pos != y) {
+        Canvas.print(name, 0, y * 8, Color.white)
+      } else {
+        Canvas.rectfill(0, y * 8, 128, 8, Color.white)
+        Canvas.print(name, 0, y * 8, Color.black)
+      }
+      y = y + 1
+    }
+    _files.each {|name|
+      if (_pos != y) {
+        Canvas.print(name, 0, y * 8, Color.white)
+      } else {
+        Canvas.rectfill(0, y * 8, 128, 8, Color.white)
+        Canvas.print(name, 0, y * 8, Color.black)
+      }
+      y = y + 1
+    }
+  }
+}
+
 class Game {
     static init() {
       Window.resize(4*128, 4*128)
@@ -599,15 +687,19 @@ class Game {
       Mouse.hidden = true
       var level = Level.fromFile("level.map")
       __world = World.init(level)
+      __picker = FilePicker.open(FileSystem.basePath())
+      __state = __world
     }
 
     static update() {
       if (Keyboard.isKeyDown("escape")) {
         Process.exit()
       }
-      __world.update()
+      __state.update()
+      // __world.update()
     }
     static draw(alpha) {
-      __world.draw(alpha)
+      // __world.draw(alpha)
+      __state.draw(alpha)
     }
 }
