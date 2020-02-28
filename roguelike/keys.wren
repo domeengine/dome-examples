@@ -1,35 +1,36 @@
 import "input" for Keyboard, Mouse
 
-class Key {
-  construct new(key) {
-    init_(key, true, null)
-  }
-  construct new(key, repeatable) {
-    init_(key, repeatable, null)
-  }
-  construct new(key, repeatable, action) {
-    init_(key, repeatable, action)
-  }
-
-  init_(key, repeatable, action) {
-    _name = key
-    _repeatable = repeatable
-    _counter = 0
-    _wasPressed = false
-    _result = action
+class InputGroup {
+  construct new(inputs, action) {
+    _inputs = inputs
+    _action = action
     _firing = false
   }
+  update() {
+    _inputs.each {|input| input.update() }
+    _firing = _inputs.count > 0 && _inputs.any {|input| input.firing }
+  }
 
-  getButtonState() {
-    return Keyboard.isKeyDown(name)
+  firing { _firing }
+  action { _action }
+}
+
+class DigitalInput {
+  construct new(name, action, repeatable) {
+    _name = name
+    _repeatable = repeatable
+    _action = action
+    _counter = 0
+    _wasPressed = false
+    _firing = false
   }
 
   name { _name }
   firing { _firing }
-  action { _result }
+  action { _action }
 
   update() {
-    var isPressed = getButtonState()
+    var isPressed = getInputState()
     var fire
     if (_repeatable) {
       fire = isPressed && (_counter == 0)
@@ -48,9 +49,29 @@ class Key {
     _firing = fire
     return fire
   }
+
+  getInputState() {
+    return false
+  }
 }
 
-class MouseButton is Key {
+class Key is DigitalInput {
+  construct new(name) {
+    super(name, true, null)
+  }
+  construct new(name, repeatable) {
+    super(name, repeatable, null)
+  }
+  construct new(name, repeatable, action) {
+    super(name, repeatable, action)
+  }
+
+  getInputState() {
+    return Keyboard.isKeyDown(name)
+  }
+}
+
+class MouseButton is DigitalInput {
   construct new(key, result, repeat) {
     super(key, result, repeat)
   }
@@ -58,7 +79,7 @@ class MouseButton is Key {
     super(key, result, false)
   }
 
-  getButtonState() {
+  getInputState() {
     return Mouse.isButtonPressed(name)
   }
 }

@@ -2,13 +2,17 @@ import "./dir" for Dir
 import "./action" for Action, MoveAction, DanceAction
 import "math" for M
 
-var SLOW_SPEED = 0
-var NORMAL_SPEED = 1
-var FAST_SPEED = 2
+var SLOWEST_SPEED = 0
+var SLOW_SPEED = 1
+var NORMAL_SPEED = 3
+var FAST_SPEED = 5
 
 var GAINS = [
+  2, // third speed
   3, // half speed
+  4, // 2/3rd speed
   6, // Normal speed
+  9,
   12, // double speed
 ]
 
@@ -25,11 +29,18 @@ class Actor {
     _visible = false
   }
 
+  needsInput { false }
   // Energy Mechanics
   speed { _speed }
   speed=(v) { _speed = v }
   energy { _energy }
-  gain() { _energy = M.min(THRESHOLD, (_energy + GAINS[this.speed])) }
+  gain() {
+    if (type != "player") {
+      System.print("%(this.type) gains %(GAINS[this.speed])")
+    }
+    _energy = _energy + GAINS[this.speed]
+    return canTakeTurn
+  }
   consume() { _energy = _energy % THRESHOLD }
   canTakeTurn { _energy >= THRESHOLD }
   // END energy mechanics
@@ -58,6 +69,8 @@ class Player is Actor {
     _action = null
   }
 
+  needsInput { _action == null }
+
   getAction() {
     var action = _action
     _action = null
@@ -69,11 +82,14 @@ class Player is Actor {
 class Blob is Actor {
   construct new(x, y) {
     super("blob", x, y)
-    speed = SLOW_SPEED
+    speed = SLOWEST_SPEED
     visible = true
   }
   getAction() {
     if (x > 0) {
+      if (game.doesTileContainEntity(x - 1, y)) {
+        return MoveAction.new(null)
+      }
       return MoveAction.new("left")
     } else {
       return DanceAction.new()

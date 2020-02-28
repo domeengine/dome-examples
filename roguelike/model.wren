@@ -7,10 +7,13 @@ class GameResult {
   progress=(v) { _progress = v}
   progress { _progress }
   events { _events }
+  alternate { _alternate }
+  alternate=(v) { _alternate = v}
 
   construct new() {
     _progress = false
     _events = []
+    _alternate = null
   }
 }
 
@@ -35,33 +38,41 @@ class GameModel {
     _turn = (_turn + 1) % _entities.count
   }
 
+  currentActor { _entities[_turn] }
+
   process() {
-    var actor = _entities[_turn]
-    if (!actor.canTakeTurn) {
-      actor.gain()
-      nextTurn()
+    var actor = currentActor
+    if (actor.canTakeTurn && actor.needsInput) {
       return GameResult.new()
     }
-
-    var action = actor.getAction()
-    if (action == null) {
-      return GameResult.new()
-    }
-    _result = GameResult.new()
-    while (true) {
-      action.bind(actor)
-      _result.progress = action.perform()
-
-      if (_result.progress) {
-        actor.consume()
+    var action = null
+    while (action == null) {
+      actor = currentActor
+      if (actor.canTakeTurn || actor.gain()) {
+        if (actor.needsInput) {
+          return GameResult.new()
+        }
+        action = actor.getAction()
+      } else {
         nextTurn()
       }
-
-      if (action.alternate == null) {
-        break
-      }
-      action = action.alternate
     }
+    action.bind(actor)
+    _result = GameResult.new()
+    _result.progress = action.perform(_result)
+    while (_result.alternate != null) {
+      action = _result.alternate
+      _result.alternate = null
+      action.bind(actor)
+      _result.progress = action.perform(_result)
+    }
+
+    // Some actions should consume energy on failure
+    if (_result.progress) {
+      actor.consume()
+      nextTurn()
+    }
+
     return _result
   }
 

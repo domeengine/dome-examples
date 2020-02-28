@@ -1,5 +1,15 @@
 class Event {}
 
+class MoveEvent is Event {
+  construct new(source, direction) {
+    _source = source
+    _direction = direction
+  }
+  source { _source }
+  direction { _direction }
+
+}
+
 class GameOverEvent is Event {
   construct new() {}
 }

@@ -1,13 +1,13 @@
 import "./dir" for Dir
-import "./events" for BoltEvent, EnergyDepletedEvent
+import "./events" for BoltEvent, EnergyDepletedEvent, MoveEvent
 
 class Action {
   type { _type }
   actor { _actor }
   game { _game }
   energy { 0 }
-  alternate { null }
 
+  construct new() { _type = "none" }
   construct new(type) {
     _type = type
   }
@@ -17,7 +17,7 @@ class Action {
     _actor = actor
   }
 
-  perform() { true }
+  perform(result) { true }
   addEvent(event) { _game.addEventToResult(event) }
 }
 
@@ -25,7 +25,7 @@ class DanceAction is Action {
   construct new() {
     super("dance")
   }
-  perform() {
+  perform(result) {
     System.print("%(actor.type) dances flagrantly!")
     return true
   }
@@ -34,7 +34,7 @@ class RestAction is Action {
   construct new() {
     super("rest")
   }
-  perform() {
+  perform(result) {
     System.print("%(actor.type) rests.")
     return true
   }
@@ -43,7 +43,7 @@ class TeleportAction is Action {
   construct new() {
     super("teleport")
   }
-  perform() {
+  perform(result) {
     System.print("You win!")
     return true
   }
@@ -57,10 +57,14 @@ class MoveAction is Action {
   }
 
   energy { _energy || 0 }
-  alternate { _alternate || null }
 
-  perform() {
-    System.print("MoveAction: %(actor.type)")
+  perform(result) {
+    System.print("Action(%(type)): %(actor.type)")
+    if (_dir == null) {
+      result.alternate = Action.new()
+      return true
+    }
+
     var destX = actor.x + Dir[_dir]["x"]
     var destY = actor.y + Dir[_dir]["y"]
     var validMove = false
@@ -74,12 +78,23 @@ class MoveAction is Action {
         actor.y = destY
         validMove = true
         if (tile["teleport"]) {
-          _alternate = TeleportAction.new()
+          result.alternate = TeleportAction.new()
         }
       }
     }
-    _energy = 2
     return validMove
   }
 }
 
+class PlayerMoveAction is MoveAction {
+  construct new(direction) {
+    super(direction)
+  }
+  perform(result) {
+    var validMove = super.perform(result)
+    if (validMove) {
+      addEvent(MoveEvent.new(actor, _dir))
+    }
+    return validMove
+  }
+}
