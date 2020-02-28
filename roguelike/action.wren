@@ -7,7 +7,7 @@ class Action {
   game { _game }
   energy { 0 }
 
-  construct new() { _type = "none" }
+  construct none() { _type = "none" }
   construct new(type) {
     _type = type
   }
@@ -61,7 +61,7 @@ class MoveAction is Action {
   perform(result) {
     System.print("Action(%(type)): %(actor.type)")
     if (_dir == null) {
-      result.alternate = Action.new()
+      result.alternate = Action.none()
       return true
     }
 
