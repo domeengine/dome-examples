@@ -7,7 +7,8 @@ import "./keys" for Key
 var MAP_WIDTH = 30
 var MAP_HEIGHT = 30
 
-var SPEED = 0.01
+var SPEED = 0.001
+var MOVE_SPEED = 2/ 60
 
 var Forward = Key.new("w", true, SPEED)
 var Back = Key.new("s", true, -SPEED)
@@ -31,10 +32,10 @@ var MAP = [
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,3,1,1,1,1,1,3,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
-    2,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
-    5,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
-    2,0,0,0,0,0,0,0,0,0,0,3,1,1,0,1,1,3,0,0,0,0,0,0,0,0,0,0,0,2,
-    2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
+    2,0,2,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
+    2,0,5,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
+    2,0,2,0,0,0,0,0,0,0,0,3,1,1,0,1,1,3,0,0,0,0,0,0,0,0,0,0,0,2,
+    2,0,2,5,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
@@ -60,8 +61,8 @@ class Game {
   static init() {
     Canvas.resize(320, 200)
     Window.resize(2*320, 2*200)
-    __position = Vec.new(15, 15)
-    __angle = 0
+    __position = Vec.new(7, 11)
+    __angle = 180
     __direction = Vec.new(0, -1)
     __camera = Vec.new(1, 0)
     __displayDirty = true
@@ -69,28 +70,32 @@ class Game {
   static update() {
     KEYS.each {|key| key.update() }
     var oldPosition = __position
-    if (Keyboard.isKeyDown("a")) {
+    if (Keyboard.isKeyDown("left")) {
       __angle = __angle + LeftBtn.action
       __displayDirty = true
     }
-    if (Keyboard.isKeyDown("d")) {
+    if (Keyboard.isKeyDown("right")) {
       __angle = __angle + RightBtn.action
       __displayDirty = true
     }
-    if (StrafeRightBtn.firing) {
-      __position = __position + __direction.perp
+    // if (StrafeRightBtn.firing) {
+    if (Keyboard.isKeyDown("d")) {
+      __position = __position + __direction.perp * MOVE_SPEED
       __displayDirty = true
     }
-    if (StrafeLeftBtn.firing) {
-      __position = __position - __direction.perp
+    if (Keyboard.isKeyDown("a")) {
+    //if (StrafeLeftBtn.firing) {
+      __position = __position - __direction.perp * MOVE_SPEED
       __displayDirty = true
     }
-    if (Forward.firing) {
-      __position = __position + __direction
+    //if (Forward.firing) {
+    if (Keyboard.isKeyDown("w")) {
+      __position = __position + __direction * MOVE_SPEED
       __displayDirty = true
     }
-    if (Back.firing) {
-      __position = __position - __direction
+    if (Keyboard.isKeyDown("s")) {
+    //if (Back.firing) {
+      __position = __position - __direction * MOVE_SPEED
       __displayDirty = true
     }
     __angle = __angle % 360
@@ -141,30 +146,54 @@ class Game {
         while (!hit) {
           if (nextSideDistanceX < nextSideDistanceY) {
             nextSideDistanceX = nextSideDistanceX + sideDistanceX
-            mapPos.x = mapPos.x + stepDirection.x
+            mapPos.x = (mapPos.x + stepDirection.x)
             side = 0
           } else {
             nextSideDistanceY = nextSideDistanceY + sideDistanceY
-            mapPos.y = mapPos.y + stepDirection.y
+            mapPos.y = (mapPos.y + stepDirection.y)
             side = 1
           }
 
-
           var tile = getTileAt(mapPos)
-          hit = tile > 0
+          if (tile == 5) {
+            // Figure out the door position
+            var doorState = 1
+            if (side == 0) {
+              var halfY = mapPos.y + sideDistanceY * 0.5
+              var adj = mapPos.x - __position.x + 1
+              if (__position.x < mapPos.x) {
+                adj = adj - 1
+              }
+              var ray_mult = adj / rayDirection.x
+              var true_y_step = (sideDistanceX * sideDistanceX - 1).sqrt
+              var rye2 = rayPosition.y + rayDirection.y * ray_mult
+              var half_step_in_y = rye2 + (stepDirection.y * true_y_step) * 0.5
+              hit = (half_step_in_y.floor == mapPos.y) && (half_step_in_y - mapPos.y) < doorState
+              if (hit) {
+                // mapPos.y = mapPos.y + 0.5
+              }
+            } else {
+              var halfX = mapPos.x + sideDistanceX * 0.5
+              var adj = mapPos.y - __position.y
+              if (__position.y > mapPos.y) {
+                adj = adj + 1
+              }
+              var ray_mult = adj / rayDirection.y
+              var true_x_step = (sideDistanceY * sideDistanceY - 1).sqrt
+              var rxe2 = rayPosition.x + rayDirection.x * ray_mult
+              var half_step_in_x = rxe2 + (stepDirection.x * true_x_step) * 0.5
+              hit = (half_step_in_x.floor == mapPos.x) && (half_step_in_x - mapPos.x) < doorState
+              if (hit) {
+                // mapPos.x = mapPos.x +  0.5
+              }
+            }
+          } else {
+            hit = tile > 0
+          }
         }
 
-        var perpWallDistance
-        if (side == 0) {
-          perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
-        } else {
-          perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
-        }
-        var lineHeight = M.abs(Canvas.height / perpWallDistance)
-        var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
-        var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
 
-        var color
+        var color = Color.black
         var tile = getTileAt(mapPos)
         if (tile == 1) {
           color = Color.red
@@ -176,9 +205,25 @@ class Game {
           color = Color.white
         } else if (tile == 5) {
           color = Color.purple
+          // mapPos = mapPos + stepDirection * 0.5
         }
+
+        var perpWallDistance
+        if (side == 0) {
+          perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
+        } else {
+          perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
+        }
+        if (tile == 5) {
+          perpWallDistance = perpWallDistance + 0.5
+        }
+        var lineHeight = M.abs(Canvas.height / perpWallDistance)
+        var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
+        var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
+
+        var alpha = 0.5
         if (side == 1) {
-          color = Color.rgb(color.r / 2, color.g / 2, color.b / 2)
+          color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
         }
         Canvas.line(x, drawStart, x, drawEnd, color)
       }
@@ -186,7 +231,7 @@ class Game {
       __displayDirty = false
     }
     Canvas.print(__position, 0, 0, Color.white)
-    Canvas.print(__direction, 0, 9, Color.white)
+    // Canvas.print(__direction, 0, 9, Color.white)
     Canvas.print(__angle, 0, 18, Color.white)
   }
 
