@@ -102,7 +102,8 @@ class Game {
     if (__angle < 0) {
       __angle = __angle + 360
     }
-    if (getTileAt(__position) > 0) {
+    var tile = getTileAt(__position)
+    if (tile > 0 && tile != 5) {
       __position = oldPosition
     }
     __direction  = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
@@ -157,7 +158,7 @@ class Game {
           var tile = getTileAt(mapPos)
           if (tile == 5) {
             // Figure out the door position
-            var doorState = 1
+            var doorState = 0.75
             if (side == 0) {
               var halfY = mapPos.y + sideDistanceY * 0.5
               var adj = mapPos.x - __position.x + 1
@@ -168,13 +169,14 @@ class Game {
               var true_y_step = (sideDistanceX * sideDistanceX - 1).sqrt
               var rye2 = rayPosition.y + rayDirection.y * ray_mult
               var half_step_in_y = rye2 + (stepDirection.y * true_y_step) * 0.5
-              hit = (half_step_in_y.floor == mapPos.y) && (half_step_in_y - mapPos.y) < doorState
+              hit = (half_step_in_y.floor == mapPos.y) && (1 - 2*(half_step_in_y - mapPos.y)).abs > 1 - doorState
               if (hit) {
                 // mapPos.y = mapPos.y + 0.5
               }
             } else {
               var halfX = mapPos.x + sideDistanceX * 0.5
               var adj = mapPos.y - __position.y
+              // Adjustment
               if (__position.y > mapPos.y) {
                 adj = adj + 1
               }
@@ -182,7 +184,7 @@ class Game {
               var true_x_step = (sideDistanceY * sideDistanceY - 1).sqrt
               var rxe2 = rayPosition.x + rayDirection.x * ray_mult
               var half_step_in_x = rxe2 + (stepDirection.x * true_x_step) * 0.5
-              hit = (half_step_in_x.floor == mapPos.x) && (half_step_in_x - mapPos.x) < doorState
+              hit = (half_step_in_x.floor == mapPos.x) && (1 - 2*(half_step_in_x - mapPos.x)).abs > 1 - doorState
               if (hit) {
                 // mapPos.x = mapPos.x +  0.5
               }
@@ -205,7 +207,6 @@ class Game {
           color = Color.white
         } else if (tile == 5) {
           color = Color.purple
-          // mapPos = mapPos + stepDirection * 0.5
         }
 
         var perpWallDistance
@@ -215,6 +216,7 @@ class Game {
           perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
         }
         if (tile == 5) {
+          // This is a hack, but it puts the door in the right place for now
           perpWallDistance = perpWallDistance + 0.5
         }
         var lineHeight = M.abs(Canvas.height / perpWallDistance)
@@ -231,7 +233,6 @@ class Game {
       __displayDirty = false
     }
     Canvas.print(__position, 0, 0, Color.white)
-    // Canvas.print(__direction, 0, 9, Color.white)
     Canvas.print(__angle, 0, 18, Color.white)
   }
 
