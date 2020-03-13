@@ -11,7 +11,6 @@ var TEXTURE = List.filled(8, null)
 var TEX_WIDTH = 8
 var TEX_HEIGHT = 8
 
-
 var SPEED = 0.001
 var MOVE_SPEED = 2/ 60
 
@@ -165,7 +164,9 @@ class Game {
     if (__angle < 0) {
       __angle = __angle + 360
     }
+
     var tile = getTileAt(__position)
+
     if (tile > 0 && tile != 5) {
       __position = oldPosition
     }
@@ -274,7 +275,6 @@ class Game {
           // This is a hack, but it puts the door in the right place for now
           perpWallDistance = perpWallDistance + 0.5
         }
-
         var lineHeight = M.abs(Canvas.height / perpWallDistance)
         var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
         var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
@@ -314,7 +314,11 @@ class Game {
           }
           texX = texX.floor % TEX_WIDTH
           var texStep = 1.0 * TEX_HEIGHT / lineHeight
-          var texPos = 0
+          // If we are too close to a block, the lineHeight is gigantic, resulting in slowness
+          // So we clip the drawStart-End and _then_ calculate the texture position.
+          drawStart = M.max(0, drawStart)
+          drawEnd = M.min(Canvas.height, drawEnd)
+          var texPos = (drawStart - Canvas.height / 2 + lineHeight / 2) * texStep
           for (y in drawStart...drawEnd) {
             var texY = (texPos).floor % TEX_HEIGHT
             color = texture[(texY * TEX_WIDTH + texX)]
@@ -326,10 +330,8 @@ class Game {
           }
         }
       }
-
       __displayDirty = false
     }
-    // Canvas.print(__position, 0, 0, Color.white)
     Canvas.print(__angle, 0, 0, Color.white)
   }
 
