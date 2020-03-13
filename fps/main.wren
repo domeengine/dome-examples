@@ -7,6 +7,11 @@ import "./keys" for Key
 var MAP_WIDTH = 30
 var MAP_HEIGHT = 30
 
+var TEXTURE = List.filled(8, null)
+var TEX_WIDTH = 8
+var TEX_HEIGHT = 8
+
+
 var SPEED = 0.001
 var MOVE_SPEED = 2/ 60
 
@@ -62,10 +67,68 @@ class Game {
     Canvas.resize(320, 200)
     Window.resize(2*320, 2*200)
     __position = Vec.new(7, 11)
-    __angle = 180
-    __direction = Vec.new(0, -1)
+    __angle = 0
+    __direction = Vec.new(0, 1)
     __camera = Vec.new(1, 0)
     __displayDirty = true
+
+    var u = Color.darkblue
+    var b = Color.darkpurple
+    var w = Color.white
+    var g = Color.green
+    var r = Color.red
+
+    // Prepare textures
+    TEXTURE[0] = [
+      b,b,b,b,b,b,b,b,
+      b,u,u,u,u,u,u,b,
+      b,u,w,u,w,u,u,b,
+      b,u,w,w,w,u,u,b,
+      b,u,w,u,w,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,b,b,b,b,b,b,b
+    ]
+    TEXTURE[1] = [
+      b,b,b,b,b,b,b,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,u,u,u,u,u,u,b,
+      b,b,b,b,b,b,b,b
+    ]
+    TEXTURE[2] = [
+      g,g,g,g,g,g,g,g,
+      g,r,r,r,r,r,r,g,
+      g,r,r,r,r,r,r,g,
+      g,r,r,r,r,r,r,g,
+      g,r,r,r,r,r,r,g,
+      g,r,r,r,r,r,r,g,
+      g,r,r,r,r,r,r,g,
+      g,g,g,g,g,g,g,g
+    ]
+    TEXTURE[3] = [
+      u,u,u,u,u,u,u,u,
+      u,b,b,b,b,b,b,u,
+      u,b,b,b,b,b,b,u,
+      u,b,b,b,b,b,b,u,
+      u,b,b,b,b,b,b,u,
+      u,b,b,b,b,b,b,u,
+      u,b,b,b,b,b,b,u,
+      u,u,u,u,u,u,u,u
+    ]
+    TEXTURE[4] = [
+      b,b,b,b,b,b,b,b,
+      b,w,w,b,b,w,w,b,
+      b,w,w,b,b,w,w,b,
+      b,w,w,b,b,w,w,b,
+      b,w,w,b,b,w,w,b,
+      b,w,w,b,b,w,w,b,
+      b,w,w,b,b,w,w,b,
+      b,b,b,b,b,b,b,b
+    ]
   }
   static update() {
     KEYS.each {|key| key.update() }
@@ -194,21 +257,13 @@ class Game {
           }
         }
 
-
         var color = Color.black
         var tile = getTileAt(mapPos)
-        if (tile == 1) {
-          color = Color.red
-        } else if (tile == 2) {
-          color = Color.green
-        } else if (tile == 3) {
-          color = Color.blue
-        } else if (tile == 4) {
-          color = Color.white
-        } else if (tile == 5) {
-          color = Color.purple
-        }
+        var texture = TEXTURE[tile - 1]
 
+        /*
+        UNTEXTURED COLOR CHOOSER
+        */
         var perpWallDistance
         if (side == 0) {
           perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
@@ -219,21 +274,63 @@ class Game {
           // This is a hack, but it puts the door in the right place for now
           perpWallDistance = perpWallDistance + 0.5
         }
+
         var lineHeight = M.abs(Canvas.height / perpWallDistance)
         var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
         var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
-
         var alpha = 0.5
-        if (side == 1) {
-          color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
+
+        if (texture == null) {
+
+          if (tile == 1) {
+            color = Color.red
+          } else if (tile == 2) {
+            color = Color.green
+          } else if (tile == 3) {
+            color = Color.blue
+          } else if (tile == 4) {
+            color = Color.white
+          } else if (tile == 5) {
+            color = Color.purple
+          }
+          if (side == 1) {
+            color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
+          }
+          Canvas.line(x, drawStart, x, drawEnd, color)
+        } else {
+          var wallX
+          if (side == 0) {
+            wallX = __position.y + perpWallDistance * rayDirection.y
+          } else {
+            wallX = __position.x + perpWallDistance * rayDirection.x
+          }
+          wallX = wallX - wallX.floor
+          var texX = wallX * TEX_WIDTH
+          if (side == 0 && rayDirection.x < 0) {
+            texX = TEX_WIDTH - texX
+          }
+          if (side == 1 && rayDirection.y > 0) {
+            texX = TEX_WIDTH - texX
+          }
+          texX = texX.floor % TEX_WIDTH
+          var texStep = 1.0 * TEX_HEIGHT / lineHeight
+          var texPos = 0
+          for (y in drawStart...drawEnd) {
+            var texY = (texPos).floor % TEX_HEIGHT
+            color = texture[(texY * TEX_WIDTH + texX)]
+            if (side == 1) {
+              color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
+            }
+            Canvas.pset(x, y, color)
+            texPos = texPos + texStep
+          }
         }
-        Canvas.line(x, drawStart, x, drawEnd, color)
       }
 
       __displayDirty = false
     }
-    Canvas.print(__position, 0, 0, Color.white)
-    Canvas.print(__angle, 0, 18, Color.white)
+    // Canvas.print(__position, 0, 0, Color.white)
+    Canvas.print(__angle, 0, 0, Color.white)
   }
 
   static getTileAt(position) {
@@ -241,7 +338,7 @@ class Game {
     if (pos.x >= 0 && pos.x < MAP_WIDTH && pos.y >= 0 && pos.y < MAP_HEIGHT) {
       return MAP[MAP_WIDTH * pos.y + pos.x]
     }
-    return 0
+    return 1
   }
 
 
