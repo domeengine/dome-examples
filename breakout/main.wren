@@ -30,14 +30,14 @@ class Screen {
 }
 
 class Settings {
-  static scale {4}
-  static title {"::Breakout::"}
+    static scale {4}
+    static title {"::Breakout::"}
 
-  static init() {
-    Canvas.resize(Screen.width.max, Screen.height.max)
-    Window.resize(scale * Canvas.width, scale * Canvas.height)
-    Window.title = title
-  }
+    static init() {
+        Canvas.resize(Screen.width.max, Screen.height.max)
+        Window.resize(scale * Canvas.width, scale * Canvas.height)
+        Window.title = title
+    }
 }
 
 class Input {
@@ -77,12 +77,12 @@ class Colors {
 class Collisions {
   // Implements
   // https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection
-  static collide(hitbox, hitbox2) {
+    static collide(hitbox, hitbox2) {
     return (hitbox.x < hitbox2.x + hitbox2.width &&
             hitbox.x + hitbox.width > hitbox2.x &&
             hitbox.y < hitbox2.y + hitbox2.height &&
             hitbox.y + hitbox.height > hitbox2.y)
-  }
+    }
 }
 
 class PlayerSpeed {
@@ -146,9 +146,9 @@ class Player {
         _x = x + speed.x
         if (speed.x != 0) {
             if (speed.x > 0) {
-              speed.x = speed.x - 1
+                speed.x = speed.x - 1
             } else {
-              speed.x = speed.x + 1
+                speed.x = speed.x + 1
             }
         }
     }
@@ -163,11 +163,11 @@ class Player {
         }
             
         if (Input.right) {
-          if (speed.x < speed.max) {
-                  speed.x = speed.x + 2
-          } else {
-              speed.x = speed.max
-          }
+            if (speed.x < speed.max) {
+                speed.x = speed.x + 2
+            } else {
+                speed.x = speed.max
+            }
         }
     }
 }
@@ -582,16 +582,16 @@ class Breakout {
 }
 
 class Game {
-  static init() {
-    Settings.init()
-    __game = Breakout.new()
-  }
+    static init() {
+        Settings.init()
+        __game = Breakout.new()
+    }
 
-  static update() {
-    __game.update()
-  }
+    static update() {
+        __game.update()
+    }
 
-  static draw(dt) {
-    __game.draw()
-  }
+    static draw(dt) {
+        __game.draw()
+    }
 }
