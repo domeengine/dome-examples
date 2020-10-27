@@ -13,3 +13,6 @@
 [submodule "pongflow"]
 	path = pongflow
 	url = https://github.com/ruby0x1/dome-pong-flow
+[submodule "gpracer"]
+	path = gpracer
+	url = https://github.com/DH001/gpracer
