@@ -35,3 +35,6 @@ A Simple Monster Jumping Game. Created for the https://itch.io/jam/domejam[DomeJ
 
 ## https://github.com/ruby0x1/dome-pong-flow[Pong Flow]
 To win, instead of making it failure based, success is used. If you hit the ball, you gain a point, and the first to a certain number wins.
+
+## https://github.com/DH001/gpracer[Dome Racer]
+A simple racing game using DOME engine
