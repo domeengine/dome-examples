@@ -4,3 +4,6 @@
 [submodule "snake"]
 	path = snake
 	url = https://github.com/NinjasCL/snake
+[submodule "munstajump"]
+	path = munstajump
+	url = https://github.com/NinjasCL/munstajump
