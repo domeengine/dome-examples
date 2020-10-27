@@ -32,3 +32,6 @@ A simple breakout game clone.
 
 ## https://github.com/NinjasCL/munstajump[Munstajump]
 A Simple Monster Jumping Game. Created for the https://itch.io/jam/domejam[DomeJam March 2020].
+
+## https://github.com/ruby0x1/dome-pong-flow[Pong Flow]
+To win, instead of making it failure based, success is used. If you hit the ball, you gain a point, and the first to a certain number wins.
