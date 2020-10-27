@@ -24,6 +24,9 @@ The bare-basic framework for a top-down roguelike, based on the turn-based game 
 ## https://github.com/NinjasCL/snake[Snake]
 A simple snake game clone.
 
+## https://github.com/joshuacross/snake[Snake 2]
+A more elaborate snake game clone.
+
 ## https://github.com/NinjasCL/breakout[Breakout]
 A simple breakout game clone.
 
