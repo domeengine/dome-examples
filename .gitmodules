@@ -22,3 +22,6 @@
 [submodule "breathe"]
 	path = breathe
 	url = https://github.com/avivbeeri/breathe
+[submodule "rhythmdrive"]
+	path = rhythmdrive
+	url = https://github.com/avivbeeri/RhythmDrive

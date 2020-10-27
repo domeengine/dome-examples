@@ -46,3 +46,6 @@ The castle barracks is a mess! Swords, bows, and shields everywhere... I guess i
 A simple application for helping to pace your breathing.
 Hold the spacebar as you inhale. Watch the circle grow, then release it as you exhale.
 Relax. It will be okay.
+
+## https://github.com/avivbeeri/RhythmDrive[Rhythm Drive]
+In the far-flung future, faster-than-light travel has been discovered, through the traversal of "RhythmSpace". Engage your space-ship's "rhythmdrive" and take to the stars!
