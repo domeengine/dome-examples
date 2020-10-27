@@ -41,3 +41,8 @@ A simple racing game using DOME engine
 
 ## https://github.com/chrislewisdev/domejam[Clean that Castle!]
 The castle barracks is a mess! Swords, bows, and shields everywhere... I guess it's up to you to... Clean That Castle!
+
+## https://github.com/avivbeeri/breathe[Breathe]
+A simple application for helping to pace your breathing.
+Hold the spacebar as you inhale. Watch the circle grow, then release it as you exhale.
+Relax. It will be okay.
