@@ -38,3 +38,6 @@ To win, instead of making it failure based, success is used. If you hit the ball
 
 ## https://github.com/DH001/gpracer[Dome Racer]
 A simple racing game using DOME engine
+
+## https://github.com/chrislewisdev/domejam[Clean that Castle!]
+The castle barracks is a mess! Swords, bows, and shields everywhere... I guess it's up to you to... Clean That Castle!

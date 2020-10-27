@@ -16,3 +16,6 @@
 [submodule "gpracer"]
 	path = gpracer
 	url = https://github.com/DH001/gpracer
+[submodule "cleanthatcastle"]
+	path = cleanthatcastle
+	url = https://github.com/chrislewisdev/domejam
