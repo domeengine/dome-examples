@@ -12,40 +12,68 @@ Each example is licensed independently. Please abide by the terms of each exampl
 
 toc::[]
 
-## link:boing{ext-relative}[Boing!]
+## Installation
+
+Some examples use https://git-scm.com/docs/git-submodule[Git Submodules]. Git doesn't actually pull the submodules immediately, so you need to enter the right commands to make that happen.
+
+```sh
+$ git submodule init
+$ git submodule update
+```
+
+## Jams
+
+A Jam is an opportunity to build games with DOME, the comfortable framework for making games. It allows you to make cross-platform 2D games (for Windows, Mac and Linux) with ease.
+
+It's a time to learn the https://wren.io[Wren programming language], leave the nest and make cute, cosy and cool games!
+
+### Rules
+- You have about 10 days to make your game so that you have time to learn Wren and the DOME APIs.
+- Your entry must use DOME.
+- The entry must be considered "safe-for-work".
+- Assets (images, music, text, code) must be your own, or open-licensed.
+- Your final game must be open-sourced.
+- Have fun!
+
+### https://itch.io/jam/domejam[DOMEJam March 2020]
+The optional theme was: ~FLOW~
+
+## Examples
+
+### link:boing{ext-relative}[Boing!]
 Pong clone from https://wireframe.raspberrypi.org/books/code-the-classics1["Code The Classics Volume 1"]
 
-## link:platformer{ext-relative}[Platformer]
+### link:platformer{ext-relative}[Platformer]
 A simple platformer engine, based on https://mattmakesgames.tumblr.com/post/127890619821/towerfall-physics[this article] about the physics of Towerfall.
 
-## link:roguelike{ext-relative}[Roguelike]
+### link:roguelike{ext-relative}[Roguelike]
 The bare-basic framework for a top-down roguelike, based on the turn-based game loop discussed https://journal.stuffwithstuff.com/2014/07/15/a-turn-based-game-loop/[here].
 
-## https://github.com/NinjasCL/snake[Snake]
+### https://github.com/NinjasCL/snake[Snake]
 A simple snake game clone.
 
-## https://github.com/joshuacross/snake[Snake 2]
+### https://github.com/joshuacross/snake[Snake 2]
 A more elaborate snake game clone.
 
-## https://github.com/NinjasCL/breakout[Breakout]
+### https://github.com/NinjasCL/breakout[Breakout]
 A simple breakout game clone.
 
-## https://github.com/NinjasCL/munstajump[Munstajump]
-A Simple Monster Jumping Game. Created for the https://itch.io/jam/domejam[DomeJam March 2020].
+### https://github.com/NinjasCL/munstajump[Munstajump]
+A Simple Monster Jumping Game.
 
-## https://github.com/ruby0x1/dome-pong-flow[Pong Flow]
+### https://github.com/ruby0x1/dome-pong-flow[Pong Flow]
 To win, instead of making it failure based, success is used. If you hit the ball, you gain a point, and the first to a certain number wins.
 
-## https://github.com/DH001/gpracer[Dome Racer]
+### https://github.com/DH001/gpracer[DOME Racer]
 A simple racing game using DOME engine
 
-## https://github.com/chrislewisdev/domejam[Clean that Castle!]
+### https://github.com/chrislewisdev/domejam[Clean that Castle!]
 The castle barracks is a mess! Swords, bows, and shields everywhere... I guess it's up to you to... Clean That Castle!
 
-## https://github.com/avivbeeri/breathe[Breathe]
+### https://github.com/avivbeeri/breathe[Breathe]
 A simple application for helping to pace your breathing.
 Hold the spacebar as you inhale. Watch the circle grow, then release it as you exhale.
 Relax. It will be okay.
 
-## https://github.com/avivbeeri/RhythmDrive[Rhythm Drive]
+### https://github.com/avivbeeri/RhythmDrive[Rhythm Drive]
 In the far-flung future, faster-than-light travel has been discovered, through the traversal of "RhythmSpace". Engage your space-ship's "rhythmdrive" and take to the stars!
