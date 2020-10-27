@@ -1,0 +1,6 @@
+[submodule "breakout"]
+	path = breakout
+	url = https://github.com/NinjasCL/breakout
+[submodule "snake"]
+	path = snake
+	url = https://github.com/NinjasCL/snake
