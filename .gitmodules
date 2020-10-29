@@ -1,0 +1,27 @@
+[submodule "breakout"]
+	path = breakout
+	url = https://github.com/NinjasCL/breakout
+[submodule "snake"]
+	path = snake
+	url = https://github.com/NinjasCL/snake
+[submodule "munstajump"]
+	path = munstajump
+	url = https://github.com/NinjasCL/munstajump
+[submodule "snake2"]
+	path = snake2
+	url = https://github.com/joshuacross/snake
+[submodule "pongflow"]
+	path = pongflow
+	url = https://github.com/ruby0x1/dome-pong-flow
+[submodule "gpracer"]
+	path = gpracer
+	url = https://github.com/DH001/gpracer
+[submodule "cleanthatcastle"]
+	path = cleanthatcastle
+	url = https://github.com/chrislewisdev/domejam
+[submodule "breathe"]
+	path = breathe
+	url = https://github.com/avivbeeri/breathe
+[submodule "rhythmdrive"]
+	path = rhythmdrive
+	url = https://github.com/avivbeeri/RhythmDrive
