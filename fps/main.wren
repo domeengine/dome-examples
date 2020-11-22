@@ -1,4 +1,4 @@
-import "graphics" for Color, Canvas
+import "graphics" for Color, Canvas, ImageData
 import "dome" for Window
 import "math" for Vec, M
 import "input" for Keyboard
@@ -25,6 +25,9 @@ var StrafeRightBtn = Key.new("right", true, SPEED)
 var KEYS = [
   Back, Forward, LeftBtn, RightBtn, StrafeLeftBtn, StrafeRightBtn
 ]
+
+var FloorTexture = ImageData.loadFromFile("floor.png")
+var CeilTexture = ImageData.loadFromFile("ceil.png")
 
 var DOORS = [
   Door.new(Vec.new(2, 11)),
@@ -74,8 +77,8 @@ class Game {
     Window.resize(SCALE*Canvas.width, SCALE*Canvas.height)
     __position = Vec.new(7, 11)
     __angle = 0
-    __direction = Vec.new(0, 1)
-    __camera = Vec.new(1, 0)
+    __direction = Vec.new(0, -1)
+    __camera = Vec.new(-1, 0)
 
     var u = Color.darkblue
     var b = Color.darkpurple
@@ -177,7 +180,7 @@ class Game {
       __position = oldPosition
     }
 
-    __direction  = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
+    __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
     __camera = __direction.perp
 
     DOORS.each {|door|
@@ -300,8 +303,64 @@ class Game {
   }
 
   static draw(alpha) {
-    Canvas.cls(Color.lightgray)
-    Canvas.rectfill(0, Canvas.height / 2, Canvas.width, Canvas.height / 2, Color.darkgray)
+    // Canvas.cls(Color.lightgray)
+    // Canvas.rectfill(0, Canvas.height / 2, Canvas.width, Canvas.height / 2, Color.darkgray)
+    // Floor casting
+    // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
+    var rayDir0 = __direction - __camera
+    var rayDir1 = __direction + __camera
+    // vertical camera position
+    var posZ = 0.5 * Canvas.height
+    for (y in 0...(Canvas.height / 2)) {
+
+      // Compute position compared to horizon
+      var p = (y - (Canvas.height / 2)).floor
+
+
+      // Horizontal distance from the camera to the floor for current row
+      // Must be negative because of reasons
+      var rowDistance = -posZ / p
+
+      // calculate the real world step vector we have to add for each x (parallel to camera plane)
+      // adding step by step avoids multiplications with a weight in the inner loop
+      var floorStepX = ((rayDir1.x - rayDir0.x) * rowDistance) / Canvas.width
+      var floorStepY = ((rayDir1.y - rayDir0.y) * rowDistance) / Canvas.width
+
+      // real world coordinates of the leftmost column. This will be updated as we step to the right.
+      var floorX = __position.x + rayDir0.x * rowDistance
+      var floorY = __position.y + rayDir0.y * rowDistance
+
+      for (x in 0...Canvas.width) {
+        // the cell coord is simply got from the integer parts of floorX and floorY
+        var cellX = floorX.floor
+        var cellY = floorY.floor
+
+        // get the texture coordinate from the fractional part
+        var diffX = floorX - cellX
+        var diffY = floorY - cellY
+
+        floorX = floorX + floorStepX
+        floorY = floorY + floorStepY
+
+
+        // draw floor
+        var floorTex = FloorTexture
+        var floorTexX = ((floorTex.width - 1) * diffX).floor
+        var floorTexY = ((floorTex.height - 1) * diffY).floor
+        var c = floorTex.pget(floorTexX, floorTexY)
+        Canvas.pset(x, Canvas.height - y - 1, c)
+
+        // draw ceiling
+        var ceilTex = CeilTexture
+        var ceilTexX = ((ceilTex.width - 1) * diffX).floor
+        var ceilTexY = ((ceilTex.height - 1) * diffY).floor
+        c = ceilTex.pget(ceilTexX, ceilTexY)
+        Canvas.pset(x, y, c)
+      }
+    }
+
+
+    // Wall casting
     for (x in 0...Canvas.width) {
       var cameraX = 2 * (x / Canvas.width) - 1
       var rayPosition = __position
