@@ -181,7 +181,7 @@ class Game {
     __camera = __direction.perp
 
     DOORS.each {|door|
-      if ((door.pos - __position).length >= 2) {
+      if ((door.pos - __position).length >= 2.5) {
         door.close()
       }
       door.update()
@@ -233,31 +233,47 @@ class Game {
       if (tile == 5) {
         // Figure out the door position
         var doorState = ignoreDoors ? 1 : getDoorAt(mapPos).state
-
+        var adj
+        var ray_mult
+        // Adjustment
         if (side == 0) {
-          var halfY = mapPos.y + sideDistanceY * 0.5
-          var adj = mapPos.x - __position.x + 1
+          adj = mapPos.x - __position.x + 1
           if (__position.x < mapPos.x) {
             adj = adj - 1
           }
-          var ray_mult = adj / rayDirection.x
-          var true_y_step = (sideDistanceX * sideDistanceX - 1).sqrt
-          var rye2 = rayPosition.y + rayDirection.y * ray_mult
+          ray_mult = adj / rayDirection.x
+        } else {
+          // var halfX = mapPos.x + sideDistanceX * 0.5
+          adj = mapPos.y - __position.y
+          if (__position.y > mapPos.y) {
+            adj = adj + 1
+          }
+          ray_mult = adj / rayDirection.y
+        }
+
+        var rye2 = rayPosition.y + rayDirection.y * ray_mult
+        var rxe2 = rayPosition.x + rayDirection.x * ray_mult
+
+        var trueDeltaX = sideDistanceX
+        var trueDeltaY = sideDistanceY
+        if (rayDirection.y.abs < 0.01) {
+          trueDeltaY = 100
+        }
+        if (rayDirection.x.abs < 0.01) {
+          trueDeltaX = 100
+        }
+
+
+        if (side == 0) {
+          // var halfY = mapPos.y + sideDistanceY * 0.5
+          var true_y_step = (trueDeltaX * trueDeltaX - 1).sqrt
           var half_step_in_y = rye2 + (stepDirection.y * true_y_step) * 0.5
           hit = (half_step_in_y.floor == mapPos.y) && (1 - 2*(half_step_in_y - mapPos.y)).abs > 1 - doorState
           if (hit) {
             // mapPos.y = mapPos.y + 0.5
           }
         } else {
-          var halfX = mapPos.x + sideDistanceX * 0.5
-          var adj = mapPos.y - __position.y
-          // Adjustment
-          if (__position.y > mapPos.y) {
-            adj = adj + 1
-          }
-          var ray_mult = adj / rayDirection.y
-          var true_x_step = (sideDistanceY * sideDistanceY - 1).sqrt
-          var rxe2 = rayPosition.x + rayDirection.x * ray_mult
+          var true_x_step = (trueDeltaY * trueDeltaY - 1).sqrt
           var half_step_in_x = rxe2 + (stepDirection.x * true_x_step) * 0.5
           hit = (half_step_in_x.floor == mapPos.x) && (1 - 2*(half_step_in_x - mapPos.x)).abs > 1 - doorState
           if (hit) {
@@ -301,14 +317,18 @@ class Game {
       var texture = TEXTURE[tile - 1]
 
       var perpWallDistance
+      if (tile == 5) {
+        // If it's a door, we need to shift the map position to draw it in the correct location
+        if (side == 0) {
+          mapPos.x = mapPos.x + stepDirection.x / 2
+        } else {
+          mapPos.y = mapPos.y + stepDirection.y / 2
+        }
+      }
       if (side == 0) {
         perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
       } else {
         perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
-      }
-      if (tile == 5) {
-        // This is a hack, but it puts the door in the right place for now
-        perpWallDistance = perpWallDistance + 0.5
       }
       var lineHeight = M.abs(Canvas.height / perpWallDistance)
       var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
