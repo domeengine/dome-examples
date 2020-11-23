@@ -1,5 +1,5 @@
 import "graphics" for Color, Canvas, ImageData
-import "dome" for Window
+import "dome" for Window, Process
 import "math" for Vec, M
 import "input" for Keyboard
 import "./keys" for Key
@@ -502,14 +502,15 @@ class Game {
       }
       var drawEndX = (spriteScreenX + spriteWidth / 2).floor
       if (drawEndX >= w) {
-        drawEndX = w - 1
+        drawEndX = w
       }
 
       var texWidth = sprite.textures[0].width - 1
       var texHeight = sprite.textures[0].height - 1
 
       for (stripe in drawStartX...drawEndX) {
-        var texX = (((stripe - drawStartX) / spriteWidth) * texWidth)
+        //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
+        var texX = ((stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth).abs
         // Conditions for this if:
         //1) it's in front of camera plane so you don't see things behind you
         //2) it's on the screen (left)
