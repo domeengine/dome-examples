@@ -1,14 +1,14 @@
 import "math" for M
+import "./sprite" for Entity
 
-class Door {
+class Door is Entity {
   construct new(position) {
-    _pos = position
+    super(position)
     _locked = false
     _state = 1
     _mode = 0
   }
 
-  pos { _pos }
   locked { _locked }
   state { _state }
   mode { _mode }
