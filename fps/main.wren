@@ -3,6 +3,7 @@ import "dome" for Window
 import "math" for Vec, M
 import "input" for Keyboard
 import "./keys" for Key
+import "./sprite" for Sprite
 import "./door" for Door
 
 var MAP_WIDTH = 30
@@ -79,6 +80,10 @@ class Game {
     __angle = 0
     __direction = Vec.new(0, -1)
     __camera = Vec.new(-1, 0)
+    __zBuffer = List.filled(Canvas.width, Num.largest)
+    __sprites = [
+      Sprite.new(Vec.new(8, 13), ImageData.loadFromFile("./column.png"))
+    ]
 
     var u = Color.darkblue
     var b = Color.darkpurple
@@ -393,6 +398,8 @@ class Game {
       var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
       var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
       var alpha = 0.5
+      //SET THE ZBUFFER FOR THE SPRITE CASTING
+      __zBuffer[x] = perpWallDistance //perpendicular distance is used
 
       /*
       UNTEXTURED COLOR CHOOSER
@@ -447,6 +454,79 @@ class Game {
         }
       }
     }
+
+    sortSprites(__sprites, __position)
+    var dir = __direction
+    var h = Canvas.height
+    var w = Canvas.width
+    var cam = -__camera
+
+    for (sprite in __sprites) {
+      var spriteX = sprite.pos.x - __position.x
+      var spriteY = sprite.pos.y - __position.y
+
+      var invDet = 1.0 / (-cam.x * dir.y + dir.x * cam.y)
+      var transformX = invDet * (dir.y * spriteX - dir.x * spriteY)
+      //this is actually the depth inside the screen, that what Z is in 3D
+      var transformY = invDet * (cam.y * spriteX - cam.x * spriteY)
+      /*
+      // ORIGINAL
+      var invDet = 1.0 / (__camera.x * dir.y - dir.x * __camera.y)
+      var transformX = invDet * (dir.y * spriteX - dir.x * spriteY)
+      //this is actually the depth inside the screen, that what Z is in 3D
+      var transformY = invDet * (-__camera.y * spriteX + __camera.x * spriteY)
+      */
+      /*
+      var invDet = 1.0 / (__camera.y * dir.x - dir.y * __camera.x)
+      var transformX = invDet * (dir.x * spriteY - dir.y * spriteX)
+      //this is actually the depth inside the screen, that what Z is in 3D
+      var transformY = invDet * (-__camera.x * spriteY + __camera.y * spriteX)
+      */
+
+      var spriteScreenX = ((w / 2) * (1 + transformX / transformY)).floor
+      // Prevent fisheye
+      var spriteHeight = (h / transformY).abs.floor
+      var drawStartY = ((h - spriteHeight) / 2).floor
+      if (drawStartY < 0) {
+        drawStartY = 0
+      }
+      var drawEndY = ((spriteHeight + h) / 2).floor
+      if (drawEndY >= h) {
+        drawEndY = h - 1
+      }
+
+      var spriteWidth = (h / transformY).abs.floor
+      var drawStartX = (spriteScreenX - spriteWidth / 2).floor
+      if (drawStartX < 0) {
+        drawStartX = 0
+      }
+      var drawEndX = (spriteScreenX + spriteWidth / 2).floor
+      if (drawEndX >= w) {
+        drawEndX = w - 1
+      }
+
+      var texWidth = sprite.textures[0].width - 1
+      var texHeight = sprite.textures[0].height - 1
+
+      for (stripe in drawStartX...drawEndX) {
+        var texX = (((stripe - drawStartX) / spriteWidth) * texWidth)
+        // Conditions for this if:
+        //1) it's in front of camera plane so you don't see things behind you
+        //2) it's on the screen (left)
+        //3) it's on the screen (right)
+        //4) ZBuffer, with perpendicular distance
+        if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
+          for (y in drawStartY...drawEndY) {
+            var texY = ((y - drawStartY) / spriteHeight) * texHeight
+            var color = sprite.textures[0].pget(texX, texY)
+            Canvas.pset(stripe, y, color)
+          }
+        }
+      }
+
+
+    }
+
     Canvas.print(__angle, 0, 0, Color.white)
   }
 
@@ -466,6 +546,21 @@ class Game {
       }
     }
     return null
+  }
+
+  static sortSprites(list, position) {
+    var i = 1
+    while (i < list.count) {
+      var x = list[i]
+      var j = i - 1
+      while (j >= 0 && (list[j]-position).length > (x-position)) {
+        list[j + 1] = list[j]
+        j = j - 1
+      }
+      list[j + 1] = x
+      i = i + 1
+    }
+
   }
 
 
