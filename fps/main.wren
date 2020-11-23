@@ -82,7 +82,8 @@ class Game {
     __camera = Vec.new(-1, 0)
     __zBuffer = List.filled(Canvas.width, Num.largest)
     __sprites = [
-      Sprite.new(Vec.new(8, 13), ImageData.loadFromFile("./column.png"))
+      Sprite.new(Vec.new(8, 13), ImageData.loadFromFile("./column.png")),
+      Sprite.new(Vec.new(9, 15), ImageData.loadFromFile("./column.png"))
     ]
 
     var u = Color.darkblue
@@ -554,7 +555,7 @@ class Game {
     while (i < list.count) {
       var x = list[i]
       var j = i - 1
-      while (j >= 0 && (list[j]-position).length > (x-position)) {
+      while (j >= 0 && (list[j].pos-position).length < (x.pos-position).length) {
         list[j + 1] = list[j]
         j = j - 1
       }
