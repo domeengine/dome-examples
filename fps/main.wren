@@ -491,12 +491,12 @@ class Game {
       if (drawStartY < 0) {
         drawStartY = 0
       }
-      var drawEndY = ((spriteHeight + h) / 2).floor
+      var drawEndY = ((h + spriteHeight) / 2).floor
       if (drawEndY >= h) {
         drawEndY = h - 1
       }
 
-      var spriteWidth = (h / transformY).abs.floor
+      var spriteWidth = (h / transformY).abs.floor / 2
       var drawStartX = (spriteScreenX - spriteWidth / 2).floor
       if (drawStartX < 0) {
         drawStartX = 0
@@ -519,6 +519,8 @@ class Game {
         //4) ZBuffer, with perpendicular distance
         if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
           for (y in drawStartY...drawEndY) {
+   //         int d = (y) * 256 - h * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
+  //          int texY = ((d * texHeight) / spriteHeight) / 256;
             var texY = ((y - drawStartY) / spriteHeight) * texHeight
             var color = sprite.textures[0].pget(texX, texY)
             Canvas.pset(stripe, y, color)
