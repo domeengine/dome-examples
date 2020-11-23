@@ -32,4 +32,6 @@ class Pillar is Sprite {
     super(pos, ImageData.loadFromFile("./column.png"))
   }
   solid { true }
+  vMove { 0 }
+  vDiv { 1 }
 }

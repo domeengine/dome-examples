@@ -84,17 +84,21 @@ class Game {
     ]
     __position = Vec.new(7, 11)
     __direction = Vec.new(0, -1)
-
-    __angle = 0
-    __camera = Vec.new(-1, 0)
-    __zBuffer = List.filled(Canvas.width, Num.largest)
+    // Map data
+    // - Map arrangement
+    // - Textures for map
 
     // Prepare textures
     for (i in 1..4) {
       TEXTURE.add(importImage("wall%(i).png"))
     }
     TEXTURE.add(importImage("door.png"))
+
+    __angle = 0
+    __camera = Vec.new(-1, 0)
+    __zBuffer = List.filled(Canvas.width, Num.largest)
   }
+
 
   // Round-tripping to fetch image data is too slow, so we import the image data into
   // Wren memory for faster retrieval.
@@ -154,15 +158,8 @@ class Game {
     }
 
     var castResult = castRay(__position, __direction, true)
-
     var targetPos = castResult[0]
     var dist = targetPos - __position
-
-    if (Keyboard.isKeyDown("space")) {
-      if (getTileAt(targetPos) == 5 && dist.length < 2.5) {
-        getDoorAt(targetPos).open()
-      }
-    }
 
     if (solid) {
       __position = oldPosition
@@ -171,6 +168,11 @@ class Game {
     __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
     __camera = __direction.perp
 
+    if (Keyboard.isKeyDown("space")) {
+      if (getTileAt(targetPos) == 5 && dist.length < 2.5) {
+        getDoorAt(targetPos).open()
+      }
+    }
     DOORS.each {|door|
       if ((door.pos - __position).length >= 2.5) {
         door.close()
@@ -180,11 +182,6 @@ class Game {
   }
 
   static castRay(rayPosition, rayDirection, ignoreDoors) {
-    // var rayPosition = position
-    // var rayDirection = direction + (__camera * cameraX)
-    // double sideDistanceX = sqrt(1.0 + (rayDirection.GetY() * rayDirection.GetY() / (rayDirection.GetX() * rayDirection.GetX())));
-    // double sideDistanceY = sqrt(1.0 + (rayDirection.GetX() * rayDirection.GetX() / (rayDirection.GetY() * rayDirection.GetY())));
-
     var sideDistanceX = (1.0 + rayDirection.y.pow(2) / rayDirection.x.pow(2)).sqrt
     var sideDistanceY = (1.0 + rayDirection.x.pow(2) / rayDirection.y.pow(2)).sqrt
 
@@ -254,22 +251,15 @@ class Game {
           trueDeltaX = 100
         }
 
-
         if (side == 0) {
           // var halfY = mapPos.y + sideDistanceY * 0.5
           var true_y_step = (trueDeltaX * trueDeltaX - 1).sqrt
           var half_step_in_y = rye2 + (stepDirection.y * true_y_step) * 0.5
           hit = (half_step_in_y.floor == mapPos.y) && (1 - 2*(half_step_in_y - mapPos.y)).abs > 1 - doorState
-          if (hit) {
-            // mapPos.y = mapPos.y + 0.5
-          }
         } else {
           var true_x_step = (trueDeltaY * trueDeltaY - 1).sqrt
           var half_step_in_x = rxe2 + (stepDirection.x * true_x_step) * 0.5
           hit = (half_step_in_x.floor == mapPos.x) && (1 - 2*(half_step_in_x - mapPos.x)).abs > 1 - doorState
-          if (hit) {
-            // mapPos.x = mapPos.x +  0.5
-          }
         }
       } else {
         hit = tile > 0
@@ -291,8 +281,6 @@ class Game {
   }
 
   static draw(alpha) {
-    // Canvas.cls(Color.lightgray)
-    // Canvas.rectfill(0, Canvas.height / 2, Canvas.width, Canvas.height / 2, Color.darkgray)
     // Floor casting
     // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
     var rayDir0 = __direction - __camera
@@ -303,7 +291,6 @@ class Game {
 
       // Compute position compared to horizon
       var p = (y - (Canvas.height / 2)).floor
-
 
       // Horizontal distance from the camera to the floor for current row
       // Must be negative because of reasons
@@ -329,7 +316,6 @@ class Game {
 
         floorX = floorX + floorStepX
         floorY = floorY + floorStepY
-
 
         // draw floor
         var floorTex = FloorTexture
@@ -398,6 +384,9 @@ class Game {
           color = Color.white
         } else if (tile == 5) {
           color = Color.purple
+        } else {
+          // WORST CASE
+          color = Color.pink
         }
         if (side == 1) {
           color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
@@ -427,7 +416,6 @@ class Game {
         var texPos = (drawStart - Canvas.height / 2 + lineHeight / 2) * texStep
         for (y in drawStart...drawEnd) {
           var texY = (texPos).floor % TEX_HEIGHT
-          // color = texture.pget(texX, texY)
           color = texture[(texY * TEX_WIDTH + texX)]
           if (side == 1) {
             color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
@@ -438,18 +426,17 @@ class Game {
       }
     }
 
+    // Sort sprites in place relative to the player position
     sortSprites(__sprites, __position)
     var dir = __direction
     var h = Canvas.height
     var w = Canvas.width
     var cam = -__camera
 
-
     for (sprite in __sprites) {
       var uDiv = sprite.uDiv
       var vDiv = sprite.vDiv
       var vMove = sprite.vMove
-
 
       var spriteX = sprite.pos.x - __position.x
       var spriteY = sprite.pos.y - __position.y
@@ -464,11 +451,11 @@ class Game {
       var spriteScreenX = ((w / 2) * (1 + transformX / transformY)).floor
       // Prevent fisheye
       var spriteHeight = ((h / transformY).abs / vDiv).floor
-      var drawStartY = ((h - spriteHeight) / 2).floor + vMoveScreen
+      var drawStartY = (((h - spriteHeight) / 2) + vMoveScreen).floor
       if (drawStartY < 0) {
         drawStartY = 0
       }
-      var drawEndY = ((h + spriteHeight) / 2).floor + vMoveScreen
+      var drawEndY = (((h + spriteHeight) / 2) + vMoveScreen).floor
       if (drawEndY >= h) {
         drawEndY = h
       }
@@ -498,7 +485,7 @@ class Game {
         // TODO: stripe SHOULD be allowed to be 0
         if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
           for (y in drawStartY...drawEndY) {
-            var texY = ((y - (-spriteHeight / 2 + h / 2)) * texHeight / spriteHeight).abs
+            var texY = (((y - vMoveScreen) - (-spriteHeight / 2 + h / 2)) * texHeight / spriteHeight).abs
             // System.print("%(texX) %(texY)")
             // var texY = ((y - drawStartY) / spriteHeight) * texHeight
             var color = sprite.textures[0].pget(texX, texY)
