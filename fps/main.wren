@@ -171,6 +171,14 @@ class Game {
     }
 
     var solid = isTileHit(__position)
+    if (!solid) {
+      for (entity in __sprites) {
+        if ((entity.pos - __position).length < 1) {
+          solid = true
+        }
+      }
+    }
+
     var castResult = castRay(__position, __direction, true)
 
     var targetPos = castResult[0]
@@ -462,7 +470,13 @@ class Game {
     var w = Canvas.width
     var cam = -__camera
 
+
     for (sprite in __sprites) {
+      var uDiv = 0.5
+      var vDiv = 0.5
+      var vMove = 0
+
+
       var spriteX = sprite.pos.x - __position.x
       var spriteY = sprite.pos.y - __position.y
 
@@ -470,33 +484,22 @@ class Game {
       var transformX = invDet * (dir.y * spriteX - dir.x * spriteY)
       //this is actually the depth inside the screen, that what Z is in 3D
       var transformY = invDet * (cam.y * spriteX - cam.x * spriteY)
-      /*
-      // ORIGINAL
-      var invDet = 1.0 / (__camera.x * dir.y - dir.x * __camera.y)
-      var transformX = invDet * (dir.y * spriteX - dir.x * spriteY)
-      //this is actually the depth inside the screen, that what Z is in 3D
-      var transformY = invDet * (-__camera.y * spriteX + __camera.x * spriteY)
-      */
-      /*
-      var invDet = 1.0 / (__camera.y * dir.x - dir.y * __camera.x)
-      var transformX = invDet * (dir.x * spriteY - dir.y * spriteX)
-      //this is actually the depth inside the screen, that what Z is in 3D
-      var transformY = invDet * (-__camera.x * spriteY + __camera.y * spriteX)
-      */
+
+      var vMoveScreen = (vMove / transformY).floor
 
       var spriteScreenX = ((w / 2) * (1 + transformX / transformY)).floor
       // Prevent fisheye
-      var spriteHeight = (h / transformY).abs.floor
-      var drawStartY = ((h - spriteHeight) / 2).floor
+      var spriteHeight = ((h / transformY).abs / vDiv)
+      var drawStartY = ((h - spriteHeight) / 2).floor + vMoveScreen
       if (drawStartY < 0) {
         drawStartY = 0
       }
-      var drawEndY = ((h + spriteHeight) / 2).floor
+      var drawEndY = ((h + spriteHeight) / 2).floor + vMoveScreen
       if (drawEndY >= h) {
-        drawEndY = h - 1
+        drawEndY = h
       }
 
-      var spriteWidth = (h / transformY).abs.floor / 2
+      var spriteWidth = ((h / transformY).abs / uDiv) / 2
       var drawStartX = (spriteScreenX - spriteWidth / 2).floor
       if (drawStartX < 0) {
         drawStartX = 0
@@ -512,16 +515,19 @@ class Game {
       for (stripe in drawStartX...drawEndX) {
         //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
         var texX = ((stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth).abs
+        System.print(stripe)
+
         // Conditions for this if:
         //1) it's in front of camera plane so you don't see things behind you
         //2) it's on the screen (left)
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
-        if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
+        if (transformY > 0 && stripe >= 0 && stripe < w && transformY < __zBuffer[stripe]) {
           for (y in drawStartY...drawEndY) {
    //         int d = (y) * 256 - h * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
   //          int texY = ((d * texHeight) / spriteHeight) / 256;
-            var texY = ((y - drawStartY) / spriteHeight) * texHeight
+            var texY = ((y - (-spriteHeight / 2 + h / 2)) * texHeight / spriteHeight).abs
+            // var texY = ((y - drawStartY) / spriteHeight) * texHeight
             var color = sprite.textures[0].pget(texX, texY)
             Canvas.pset(stripe, y, color)
           }
