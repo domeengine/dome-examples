@@ -1,15 +1,15 @@
 import "graphics" for Color, Canvas, ImageData
 import "dome" for Window, Process
 import "math" for Vec, M
-import "input" for Keyboard
+import "input" for Keyboard, Mouse
 import "./keys" for Key
-import "./sprite" for Sprite
+import "./sprite" for Sprite, Pillar
 import "./door" for Door
 
 var MAP_WIDTH = 30
 var MAP_HEIGHT = 30
 
-var TEXTURE = List.filled(8, null)
+var TEXTURE = List.filled(0, null)
 var TEX_WIDTH = 8
 var TEX_HEIGHT = 8
 
@@ -73,80 +73,49 @@ var PI_RAD = Num.pi / 180
 
 class Game {
   static init() {
-    var SCALE = 3
+    var SCALE = 4
+    Mouse.relative = true
+    Mouse.hidden = true
     Canvas.resize(320, 200)
     Window.resize(SCALE*Canvas.width, SCALE*Canvas.height)
+    __sprites = [
+      Pillar.new(Vec.new(8, 13)),
+      Pillar.new(Vec.new(9, 15))
+    ]
     __position = Vec.new(7, 11)
-    __angle = 0
     __direction = Vec.new(0, -1)
+
+    __angle = 0
     __camera = Vec.new(-1, 0)
     __zBuffer = List.filled(Canvas.width, Num.largest)
-    __sprites = [
-      Sprite.new(Vec.new(8, 13), ImageData.loadFromFile("./column.png")),
-      Sprite.new(Vec.new(9, 15), ImageData.loadFromFile("./column.png"))
-    ]
-
-    var u = Color.darkblue
-    var b = Color.darkpurple
-    var w = Color.white
-    var g = Color.green
-    var r = Color.red
 
     // Prepare textures
-    TEXTURE[0] = [
-      b,b,b,b,b,b,b,b,
-      b,u,u,u,u,u,u,b,
-      b,u,w,u,w,u,u,b,
-      b,u,w,w,w,u,u,b,
-      b,u,w,u,w,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,b,b,b,b,b,b,b
-    ]
-    TEXTURE[1] = [
-      b,b,b,b,b,b,b,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,u,u,u,u,u,u,b,
-      b,b,b,b,b,b,b,b
-    ]
-    TEXTURE[2] = [
-      g,g,g,g,g,g,g,g,
-      g,r,r,r,r,r,r,g,
-      g,r,r,r,r,r,r,g,
-      g,r,r,r,r,r,r,g,
-      g,r,r,r,r,r,r,g,
-      g,r,r,r,r,r,r,g,
-      g,r,r,r,r,r,r,g,
-      g,g,g,g,g,g,g,g
-    ]
-    TEXTURE[3] = [
-      u,u,u,u,u,u,u,u,
-      u,b,b,b,b,b,b,u,
-      u,b,b,b,b,b,b,u,
-      u,b,b,b,b,b,b,u,
-      u,b,b,b,b,b,b,u,
-      u,b,b,b,b,b,b,u,
-      u,b,b,b,b,b,b,u,
-      u,u,u,u,u,u,u,u
-    ]
-    TEXTURE[4] = [
-      b,b,b,b,b,b,b,b,
-      b,w,w,b,b,w,w,b,
-      b,w,w,b,b,w,w,b,
-      b,w,w,b,b,w,w,b,
-      b,w,w,b,b,w,w,b,
-      b,w,w,b,b,w,w,b,
-      b,w,w,b,b,w,w,b,
-      b,b,b,b,b,b,b,b
-    ]
+    for (i in 1..4) {
+      TEXTURE.add(importImage("wall%(i).png"))
+    }
+    TEXTURE.add(importImage("door.png"))
   }
+
+  // Round-tripping to fetch image data is too slow, so we import the image data into
+  // Wren memory for faster retrieval.
+  static importImage(path) {
+    var texture = []
+    var img = ImageData.loadFromFile(path)
+    for (y in 0...img.height) {
+      for (x in 0...img.width) {
+        texture.add(img.pget(x,y))
+      }
+    }
+    return texture
+  }
+
   static update() {
     KEYS.each {|key| key.update() }
     var oldPosition = __position
+    if (Keyboard.isKeyDown("escape")) {
+      Process.exit()
+    }
+
     if (Keyboard.isKeyDown("left")) {
       __angle = __angle + LeftBtn.action
     }
@@ -165,6 +134,11 @@ class Game {
     if (Keyboard.isKeyDown("s")) {
       __position = __position - __direction * MOVE_SPEED
     }
+
+    if (Mouse.x != 0) {
+      __angle = __angle + M.mid(-2.5, Mouse.x, 2.5)
+    }
+
     __angle = __angle % 360
     if (__angle < 0) {
       __angle = __angle + 360
@@ -173,8 +147,8 @@ class Game {
     var solid = isTileHit(__position)
     if (!solid) {
       for (entity in __sprites) {
-        if ((entity.pos - __position).length < 1) {
-          solid = true
+        if ((entity.pos - __position).length < 0.5) {
+          solid = solid || entity.solid
         }
       }
     }
@@ -414,7 +388,6 @@ class Game {
       UNTEXTURED COLOR CHOOSER
       */
       if (texture == null) {
-
         if (tile == 1) {
           color = Color.red
         } else if (tile == 2) {
@@ -454,6 +427,7 @@ class Game {
         var texPos = (drawStart - Canvas.height / 2 + lineHeight / 2) * texStep
         for (y in drawStart...drawEnd) {
           var texY = (texPos).floor % TEX_HEIGHT
+          // color = texture.pget(texX, texY)
           color = texture[(texY * TEX_WIDTH + texX)]
           if (side == 1) {
             color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
@@ -472,9 +446,9 @@ class Game {
 
 
     for (sprite in __sprites) {
-      var uDiv = 0.5
-      var vDiv = 0.5
-      var vMove = 0
+      var uDiv = sprite.uDiv
+      var vDiv = sprite.vDiv
+      var vMove = sprite.vMove
 
 
       var spriteX = sprite.pos.x - __position.x
@@ -489,7 +463,7 @@ class Game {
 
       var spriteScreenX = ((w / 2) * (1 + transformX / transformY)).floor
       // Prevent fisheye
-      var spriteHeight = ((h / transformY).abs / vDiv)
+      var spriteHeight = ((h / transformY).abs / vDiv).floor
       var drawStartY = ((h - spriteHeight) / 2).floor + vMoveScreen
       if (drawStartY < 0) {
         drawStartY = 0
@@ -499,14 +473,14 @@ class Game {
         drawEndY = h
       }
 
-      var spriteWidth = ((h / transformY).abs / uDiv) / 2
+      var spriteWidth = (((h / transformY).abs / uDiv) / 2).floor
       var drawStartX = (spriteScreenX - spriteWidth / 2).floor
       if (drawStartX < 0) {
         drawStartX = 0
       }
       var drawEndX = (spriteScreenX + spriteWidth / 2).floor
       if (drawEndX >= w) {
-        drawEndX = w
+        drawEndX = w - 1
       }
 
       var texWidth = sprite.textures[0].width - 1
@@ -515,27 +489,29 @@ class Game {
       for (stripe in drawStartX...drawEndX) {
         //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
         var texX = ((stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth).abs
-        System.print(stripe)
 
         // Conditions for this if:
         //1) it's in front of camera plane so you don't see things behind you
         //2) it's on the screen (left)
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
-        if (transformY > 0 && stripe >= 0 && stripe < w && transformY < __zBuffer[stripe]) {
+        // TODO: stripe SHOULD be allowed to be 0
+        if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
           for (y in drawStartY...drawEndY) {
-   //         int d = (y) * 256 - h * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
-  //          int texY = ((d * texHeight) / spriteHeight) / 256;
             var texY = ((y - (-spriteHeight / 2 + h / 2)) * texHeight / spriteHeight).abs
+            // System.print("%(texX) %(texY)")
             // var texY = ((y - drawStartY) / spriteHeight) * texHeight
             var color = sprite.textures[0].pget(texX, texY)
             Canvas.pset(stripe, y, color)
           }
         }
       }
-
-
     }
+
+    var centerX = Canvas.width / 2
+    var centerY = Canvas.height / 2
+    Canvas.line(centerX - 8, centerY, centerX + 8, centerY, Color.green, 1)
+    Canvas.line(centerX, centerY - 8, centerX, centerY + 8, Color.green, 1)
 
     Canvas.print(__angle, 0, 0, Color.white)
   }

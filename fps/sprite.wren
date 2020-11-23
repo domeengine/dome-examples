@@ -1,8 +1,10 @@
+import "graphics" for ImageData
 
 class Entity {
   construct new(position) {
     _pos = position
   }
+  solid { false }
   pos { _pos }
 
   update() {}
@@ -19,4 +21,15 @@ class Sprite is Entity {
   }
 
   textures { _textures }
+
+  uDiv { 1 }
+  vDiv { 1 }
+  vMove { 0 }
+}
+
+class Pillar is Sprite {
+  construct new(pos) {
+    super(pos, ImageData.loadFromFile("./column.png"))
+  }
+  solid { true }
 }
