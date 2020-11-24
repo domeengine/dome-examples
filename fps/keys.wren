@@ -1,85 +1,45 @@
-import "input" for Keyboard, Mouse
+/*
+  InputGroup Library v0.3
+  Allows for grouping DigitalInput together into a single action,
+  with allowances for repetition.
+*/
+import "input" for Keyboard, Mouse, DigitalInput
 
 class InputGroup {
   construct new(inputs, action) {
-    _inputs = inputs
-    _action = action
-    _firing = false
-  }
-  update() {
-    _inputs.each {|input| input.update() }
-    _firing = _inputs.count > 0 && _inputs.any {|input| input.firing }
-  }
-
-  firing { _firing }
-  action { _action }
-}
-
-class DigitalInput {
-  construct new(name, action, repeatable) {
-    _name = name
-    _repeatable = repeatable
-    _action = action
-    _counter = 0
-    _wasPressed = false
-    _firing = false
-  }
-
-  name { _name }
-  firing { _firing }
-  action { _action }
-
-  update() {
-    var isPressed = getInputState()
-    var fire
-    if (_repeatable) {
-      fire = isPressed && (_counter == 0)
-      if (!isPressed) {
-        _counter = 0
-      } else if (fire) {
-        _counter = 4
-      } else {
-        _counter = _counter - 1
-      }
-    } else {
-      fire = !_wasPressed && isPressed
-      _wasPressed = isPressed
+    if (inputs is Sequence) {
+      _inputs = inputs
+    } else if (inputs is DigitalInput) {
+      _inputs = [ inputs ]
     }
 
-    _firing = fire
-    return fire
+    _action = action
+    _repeating = true
+    _freq = 30
+    if (!_inputs.all {|input| input is DigitalInput }) {
+      Fiber.abort("Inputs must be DigitalInput")
+    }
   }
 
-  getInputState() {
-    return false
-  }
-}
+  repeating { _repeating }
+  repeating=(v) { _repeating = v }
 
-class Key is DigitalInput {
-  construct new(name) {
-    super(name, null, true)
-  }
-  construct new(name, repeatable) {
-    super(name, null, repeatable)
-  }
-  construct new(name, repeatable, action) {
-    super(name, action, repeatable)
+  frequency { _freq }
+  frequency=(v) { _freq = v }
+
+  down {
+    return _inputs.count > 0 && _inputs.any {|input| input.down }
   }
 
-  getInputState() {
-    return Keyboard.isKeyDown(name)
-  }
-}
-
-class MouseButton is DigitalInput {
-  construct new(key, result, repeat) {
-    super(key, result, repeat)
-  }
-  construct new(key, result) {
-    super(key, result, false)
+  firing {
+    return _inputs.count > 0 && _inputs.any {|input|
+      if (_repeating) {
+        return input.down && input.repeats % _freq == 0
+      } else {
+        return input.justPressed
+      }
+    }
   }
 
-  getInputState() {
-    return Mouse.isButtonPressed(name)
-  }
+  action { _action }
 }

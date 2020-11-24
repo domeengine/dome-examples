@@ -2,7 +2,7 @@ import "graphics" for Color, Canvas
 import "dome" for Window, Process
 import "math" for Vec, M
 import "input" for Keyboard, Mouse
-import "./keys" for Key
+import "./keys" for InputGroup
 import "./sprite" for Sprite, Pillar
 import "./door" for Door
 import "./texture" for Texture
@@ -10,23 +10,16 @@ import "./texture" for Texture
 var MAP_WIDTH = 30
 var MAP_HEIGHT = 30
 
-var TEXTURE = List.filled(0, null)
-var TEX_WIDTH = 8
-var TEX_HEIGHT = 8
-
 var SPEED = 0.001
 var MOVE_SPEED = 2/ 60
 
-var Forward = Key.new("w", true, SPEED)
-var Back = Key.new("s", true, -SPEED)
-var LeftBtn = Key.new("a", true, -1)
-var RightBtn = Key.new("d", true, 1)
-var StrafeLeftBtn = Key.new("left", true, -SPEED)
-var StrafeRightBtn = Key.new("right", true, SPEED)
-
-var KEYS = [
-  Back, Forward, LeftBtn, RightBtn, StrafeLeftBtn, StrafeRightBtn
-]
+var Interact = InputGroup.new([ Mouse["left"], Keyboard["e"], Keyboard["space"] ], SPEED)
+var Forward = InputGroup.new(Keyboard["w"], SPEED)
+var Back = InputGroup.new(Keyboard["s"], -SPEED)
+var LeftBtn = InputGroup.new(Keyboard["a"], -SPEED)
+var RightBtn = InputGroup.new(Keyboard["d"], SPEED)
+var StrafeLeftBtn = InputGroup.new(Keyboard["left"], -1)
+var StrafeRightBtn = InputGroup.new(Keyboard["right"], 1)
 
 var FloorTexture = Texture.importImg("floor.png")
 var CeilTexture = Texture.importImg("ceil.png")
@@ -90,10 +83,11 @@ class Game {
     // - Textures for map
 
     // Prepare textures
+    __textures = []
     for (i in 1..4) {
-      TEXTURE.add(Texture.importImg("wall%(i).png"))
+      __textures.add(Texture.importImg("wall%(i).png"))
     }
-    TEXTURE.add(Texture.importImg("door.png"))
+    __textures.add(Texture.importImg("door.png"))
 
     __angle = 0
     __camera = Vec.new(-1, 0)
@@ -102,33 +96,32 @@ class Game {
 
 
   static update() {
-    KEYS.each {|key| key.update() }
     var oldPosition = __position
     if (Keyboard.isKeyDown("escape")) {
       Process.exit()
     }
 
-    if (Keyboard.isKeyDown("left")) {
-      __angle = __angle + LeftBtn.action
+    if (StrafeLeftBtn.down) {
+      __angle = __angle + StrafeLeftBtn.action
     }
-    if (Keyboard.isKeyDown("right")) {
-      __angle = __angle + RightBtn.action
+    if (StrafeRightBtn.down) {
+      __angle = __angle + StrafeRightBtn.action
     }
-    if (Keyboard.isKeyDown("d")) {
+    if (RightBtn.down) {
       __position = __position + __direction.perp * MOVE_SPEED
     }
-    if (Keyboard.isKeyDown("a")) {
+    if (LeftBtn.down) {
       __position = __position - __direction.perp * MOVE_SPEED
     }
-    if (Keyboard.isKeyDown("w")) {
+    if (Forward.down) {
       __position = __position + __direction * MOVE_SPEED
     }
-    if (Keyboard.isKeyDown("s")) {
+    if (Back.down) {
       __position = __position - __direction * MOVE_SPEED
     }
 
     if (Mouse.x != 0) {
-      __angle = __angle + M.mid(-2, Mouse.x, 2)
+      __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
     }
 
     __angle = __angle % 360
@@ -156,13 +149,13 @@ class Game {
     __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
     __camera = __direction.perp
 
-    if (Keyboard.isKeyDown("space")) {
-      if (getTileAt(targetPos) == 5 && dist.length < 2.5) {
+    if (Interact.firing) {
+      if (getTileAt(targetPos) == 5 && dist.length < 3) {
         getDoorAt(targetPos).open()
       }
     }
     DOORS.each {|door|
-      if ((door.pos - __position).length >= 2.5) {
+      if ((door.pos - __position).length >= 3) {
         door.close()
       }
       door.update()
@@ -335,7 +328,7 @@ class Game {
 
       var color = Color.black
       var tile = getTileAt(mapPos)
-      var texture = TEXTURE[tile - 1]
+      var texture = __textures[tile - 1]
 
       var perpWallDistance
       if (tile == 5) {
@@ -362,20 +355,8 @@ class Game {
       UNTEXTURED COLOR CHOOSER
       */
       if (texture == null) {
-        if (tile == 1) {
-          color = Color.red
-        } else if (tile == 2) {
-          color = Color.green
-        } else if (tile == 3) {
-          color = Color.blue
-        } else if (tile == 4) {
-          color = Color.white
-        } else if (tile == 5) {
-          color = Color.purple
-        } else {
-          // WORST CASE
-          color = Color.pink
-        }
+        // WORST CASE
+        color = Color.pink
         if (side == 1) {
           color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
         }
@@ -388,15 +369,15 @@ class Game {
           wallX = __position.x + perpWallDistance * rayDirection.x
         }
         wallX = wallX - wallX.floor
-        var texX = wallX * TEX_WIDTH
+        var texX = wallX * texture.width
         if (side == 0 && rayDirection.x <= 0) {
-          texX = TEX_WIDTH - texX
+          texX = texture.width - texX
         }
         if (side == 1 && rayDirection.y > 0) {
-          texX = TEX_WIDTH - texX
+          texX = texture.width - texX
         }
         texX = texX.floor
-        var texStep = 1.0 * TEX_HEIGHT / lineHeight
+        var texStep = 1.0 * texture.height / lineHeight
         // If we are too close to a block, the lineHeight is gigantic, resulting in slowness
         // So we clip the drawStart-End and _then_ calculate the texture position.
         drawStart = M.max(0, drawStart)
