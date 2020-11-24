@@ -7,8 +7,7 @@ import "./sprite" for Sprite, Pillar
 import "./door" for Door
 import "./texture" for Texture
 
-var MAP_WIDTH = 30
-var MAP_HEIGHT = 30
+var PI_RAD = Num.pi / 180
 
 var SPEED = 0.001
 var MOVE_SPEED = 2/ 60
@@ -21,14 +20,14 @@ var RightBtn = InputGroup.new(Keyboard["d"], SPEED)
 var StrafeLeftBtn = InputGroup.new(Keyboard["left"], -1)
 var StrafeRightBtn = InputGroup.new(Keyboard["right"], 1)
 
-var FloorTexture = Texture.importImg("floor.png")
-var CeilTexture = Texture.importImg("ceil.png")
 
 var DOORS = [
   Door.new(Vec.new(2, 11)),
   Door.new(Vec.new(3, 13))
 ]
 
+var MAP_WIDTH = 30
+var MAP_HEIGHT = 30
 var MAP = [
     2,2,2,2,2,2,2,2,2,2,2,4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
@@ -62,7 +61,6 @@ var MAP = [
     2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
 ]
 
-var PI_RAD = Num.pi / 180
 
 
 class Game {
@@ -83,6 +81,8 @@ class Game {
     // - Textures for map
 
     // Prepare textures
+    __floorTexture = Texture.importImg("floor.png")
+    __ceilTexture = Texture.importImg("ceil.png")
     __textures = []
     for (i in 1..4) {
       __textures.add(Texture.importImg("wall%(i).png"))
@@ -138,10 +138,6 @@ class Game {
       }
     }
 
-    var castResult = castRay(__position, __direction, true)
-    var targetPos = castResult[0]
-    var dist = targetPos - __position
-
     if (solid) {
       __position = oldPosition
     }
@@ -149,13 +145,17 @@ class Game {
     __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
     __camera = __direction.perp
 
+    var castResult = castRay(__position, __direction, true)
+    var targetPos = castResult[0]
+    var dist = targetPos - __position
+
     if (Interact.firing) {
-      if (getTileAt(targetPos) == 5 && dist.length < 3) {
+      if (getTileAt(targetPos) == 5 && dist.length < 2.75) {
         getDoorAt(targetPos).open()
       }
     }
     DOORS.each {|door|
-      if ((door.pos - __position).length >= 3) {
+      if ((door.pos - __position).length >= 2.75) {
         door.close()
       }
       door.update()
@@ -299,14 +299,14 @@ class Game {
         floorY = floorY + floorStepY
 
         // draw floor
-        var floorTex = FloorTexture
+        var floorTex = __floorTexture
         var floorTexX = ((floorTex.width - 1) * diffX)
         var floorTexY = ((floorTex.height - 1) * diffY)
         var c = floorTex.pget(floorTexX, floorTexY)
         Canvas.pset(x, Canvas.height - y - 1, c)
 
         // draw ceiling
-        var ceilTex = CeilTexture
+        var ceilTex = __ceilTexture
         var ceilTexX = ((ceilTex.width - 1) * diffX)
         var ceilTexY = ((ceilTex.height - 1) * diffY)
         c = ceilTex.pget(ceilTexX, ceilTexY)
@@ -467,8 +467,8 @@ class Game {
 
     var centerX = Canvas.width / 2
     var centerY = Canvas.height / 2
-    Canvas.line(centerX - 8, centerY, centerX + 8, centerY, Color.green, 1)
-    Canvas.line(centerX, centerY - 8, centerX, centerY + 8, Color.green, 1)
+    Canvas.line(centerX - 4, centerY, centerX + 4, centerY, Color.green, 1)
+    Canvas.line(centerX, centerY - 4, centerX, centerY + 4, Color.green, 1)
 
     Canvas.print(__angle, 0, 0, Color.white)
   }
@@ -503,8 +503,5 @@ class Game {
       list[j + 1] = x
       i = i + 1
     }
-
   }
-
-
 }
