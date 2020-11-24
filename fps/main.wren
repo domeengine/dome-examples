@@ -1,10 +1,11 @@
-import "graphics" for Color, Canvas, ImageData
+import "graphics" for Color, Canvas
 import "dome" for Window, Process
 import "math" for Vec, M
 import "input" for Keyboard, Mouse
 import "./keys" for Key
 import "./sprite" for Sprite, Pillar
 import "./door" for Door
+import "./texture" for Texture
 
 var MAP_WIDTH = 30
 var MAP_HEIGHT = 30
@@ -27,8 +28,8 @@ var KEYS = [
   Back, Forward, LeftBtn, RightBtn, StrafeLeftBtn, StrafeRightBtn
 ]
 
-var FloorTexture = ImageData.loadFromFile("floor.png")
-var CeilTexture = ImageData.loadFromFile("ceil.png")
+var FloorTexture = Texture.importImg("floor.png")
+var CeilTexture = Texture.importImg("ceil.png")
 
 var DOORS = [
   Door.new(Vec.new(2, 11)),
@@ -90,28 +91,15 @@ class Game {
 
     // Prepare textures
     for (i in 1..4) {
-      TEXTURE.add(importImage("wall%(i).png"))
+      TEXTURE.add(Texture.importImg("wall%(i).png"))
     }
-    TEXTURE.add(importImage("door.png"))
+    TEXTURE.add(Texture.importImg("door.png"))
 
     __angle = 0
     __camera = Vec.new(-1, 0)
     __zBuffer = List.filled(Canvas.width, Num.largest)
   }
 
-
-  // Round-tripping to fetch image data is too slow, so we import the image data into
-  // Wren memory for faster retrieval.
-  static importImage(path) {
-    var texture = []
-    var img = ImageData.loadFromFile(path)
-    for (y in 0...img.height) {
-      for (x in 0...img.width) {
-        texture.add(img.pget(x,y))
-      }
-    }
-    return texture
-  }
 
   static update() {
     KEYS.each {|key| key.update() }
@@ -140,7 +128,7 @@ class Game {
     }
 
     if (Mouse.x != 0) {
-      __angle = __angle + M.mid(-2.5, Mouse.x, 2.5)
+      __angle = __angle + M.mid(-2, Mouse.x, 2)
     }
 
     __angle = __angle % 360
@@ -319,15 +307,15 @@ class Game {
 
         // draw floor
         var floorTex = FloorTexture
-        var floorTexX = ((floorTex.width - 1) * diffX).floor
-        var floorTexY = ((floorTex.height - 1) * diffY).floor
+        var floorTexX = ((floorTex.width - 1) * diffX)
+        var floorTexY = ((floorTex.height - 1) * diffY)
         var c = floorTex.pget(floorTexX, floorTexY)
         Canvas.pset(x, Canvas.height - y - 1, c)
 
         // draw ceiling
         var ceilTex = CeilTexture
-        var ceilTexX = ((ceilTex.width - 1) * diffX).floor
-        var ceilTexY = ((ceilTex.height - 1) * diffY).floor
+        var ceilTexX = ((ceilTex.width - 1) * diffX)
+        var ceilTexY = ((ceilTex.height - 1) * diffY)
         c = ceilTex.pget(ceilTexX, ceilTexY)
         Canvas.pset(x, y, c)
       }
@@ -401,13 +389,13 @@ class Game {
         }
         wallX = wallX - wallX.floor
         var texX = wallX * TEX_WIDTH
-        if (side == 0 && rayDirection.x < 0) {
+        if (side == 0 && rayDirection.x <= 0) {
           texX = TEX_WIDTH - texX
         }
         if (side == 1 && rayDirection.y > 0) {
           texX = TEX_WIDTH - texX
         }
-        texX = texX.floor % TEX_WIDTH
+        texX = texX.floor
         var texStep = 1.0 * TEX_HEIGHT / lineHeight
         // If we are too close to a block, the lineHeight is gigantic, resulting in slowness
         // So we clip the drawStart-End and _then_ calculate the texture position.
@@ -415,8 +403,9 @@ class Game {
         drawEnd = M.min(Canvas.height, drawEnd)
         var texPos = (drawStart - Canvas.height / 2 + lineHeight / 2) * texStep
         for (y in drawStart...drawEnd) {
-          var texY = (texPos).floor % TEX_HEIGHT
-          color = texture[(texY * TEX_WIDTH + texX)]
+          var texY = (texPos).floor
+          // color = texture[(texY * TEX_WIDTH + texX)]
+          color = texture.pget(texX, texY)
           if (side == 1) {
             color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
           }

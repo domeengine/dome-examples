@@ -1,4 +1,4 @@
-import "graphics" for ImageData
+import "./texture" for Texture
 
 class Entity {
   construct new(position) {
@@ -29,7 +29,7 @@ class Sprite is Entity {
 
 class Pillar is Sprite {
   construct new(pos) {
-    super(pos, ImageData.loadFromFile("./column.png"))
+    super(pos, Texture.importImg("./column.png"))
   }
   solid { true }
   vMove { 0 }
