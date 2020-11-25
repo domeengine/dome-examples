@@ -98,6 +98,7 @@ class Game {
     __angle = 0
     __camera = Vec.new(-1, 0)
     __zBuffer = List.filled(Canvas.width, Num.largest)
+    __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0] }.toList
     __dirty = true
   }
 
@@ -156,6 +157,38 @@ class Game {
 
     if (solid) {
       __position = oldPosition
+    }
+
+    for (x in 0...Canvas.width) {
+      var rayPosition = __position
+      var cameraX = 2 * (x / Canvas.width) - 1
+      var rayDirection = __direction + (__camera * cameraX)
+      var castResult = castRay(rayPosition, rayDirection, false)
+      var mapPos = castResult[0]
+      var side = castResult[1]
+      var stepDirection = castResult[2]
+      var tile = getTileAt(mapPos)
+
+      var perpWallDistance
+      if (tile == 5) {
+        // If it's a door, we need to shift the map position to draw it in the correct location
+        if (side == 0) {
+          mapPos.x = mapPos.x + stepDirection.x / 2
+        } else {
+          mapPos.y = mapPos.y + stepDirection.y / 2
+        }
+      }
+      if (side == 0) {
+        perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
+      } else {
+        perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
+      }
+      //SET THE ZBUFFER FOR THE SPRITE CASTING
+      __zBuffer[x] = perpWallDistance //perpendicular distance is used
+      var ray = __rayBuffer[x]
+      ray[0] = perpWallDistance
+      ray[1] = mapPos
+      ray[2] = side
     }
 
 
@@ -371,36 +404,22 @@ class Game {
     for (x in 0...Canvas.width) {
       var cameraX = 2 * (x / Canvas.width) - 1
       var rayDirection = __direction + (__camera * cameraX)
-      var castResult = castRay(rayPosition, rayDirection, false)
-      var mapPos = castResult[0]
-      var side = castResult[1]
-      var stepDirection = castResult[2]
-      var hit = isTileHit(mapPos)
+
+      var ray = __rayBuffer[x]
+      var perpWallDistance = ray[0]
+      var mapPos = ray[1]
+      var side = ray[2]
+      // perpWallDistance = __zBuffer[x]
 
       var color = Color.black
       var tile = getTileAt(mapPos)
       var texture = __textures[tile - 1]
 
-      var perpWallDistance
-      if (tile == 5) {
-        // If it's a door, we need to shift the map position to draw it in the correct location
-        if (side == 0) {
-          mapPos.x = mapPos.x + stepDirection.x / 2
-        } else {
-          mapPos.y = mapPos.y + stepDirection.y / 2
-        }
-      }
-      if (side == 0) {
-        perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
-      } else {
-        perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
-      }
       var lineHeight = M.abs(Canvas.height / perpWallDistance)
       var drawStart = (-lineHeight / 2) + (centerY)
       var drawEnd = (lineHeight / 2) + (centerY)
       var alpha = 0.5
       //SET THE ZBUFFER FOR THE SPRITE CASTING
-      __zBuffer[x] = perpWallDistance //perpendicular distance is used
 
       /*
       UNTEXTURED COLOR CHOOSER
