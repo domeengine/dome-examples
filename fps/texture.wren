@@ -1,4 +1,4 @@
-import "graphics" for ImageData
+import "graphics" for ImageData, Color
 import "math" for M
 
 class Texture {
@@ -9,11 +9,30 @@ class Texture {
     _data = data
     _width = width
     _height = height
+    _iwidth = width - 1
+    _iheight = height - 1
+    var alpha = 0.5
+    _darker = []
+    for (color in _data) {
+      var newColor = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha, color.a)
+      _darker.add(newColor)
+    }
   }
 
   [n] { _data[n] }
   width { _width }
   height { _height }
+
+  pget(x, y) {
+    x = M.mid(0, x, _iwidth).round
+    y = M.mid(0, y, _iheight).round
+    return _data[y * width + x]
+  }
+  pgetDark(x, y) {
+    x = M.mid(0, x, _iwidth).round
+    y = M.mid(0, y, _iheight).round
+    return _darker[y * width + x]
+  }
 
   static importImg(path) {
     var texture = []
@@ -27,9 +46,4 @@ class Texture {
   }
 
 
-  pget(x, y) {
-    x = M.mid(0, x, width - 1).round
-    y = M.mid(0, y, height - 1).round
-    return this[y * width + x]
-  }
 }
