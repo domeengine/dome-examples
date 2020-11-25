@@ -108,25 +108,6 @@ class Game {
       Process.exit()
     }
 
-    if (StrafeLeftBtn.down) {
-      __angle = __angle + StrafeLeftBtn.action
-    }
-    if (StrafeRightBtn.down) {
-      __angle = __angle + StrafeRightBtn.action
-    }
-    if (RightBtn.down) {
-      __position = __position + __direction.perp * MOVE_SPEED
-    }
-    if (LeftBtn.down) {
-      __position = __position - __direction.perp * MOVE_SPEED
-    }
-    if (Forward.down) {
-      __position = __position + __direction * MOVE_SPEED
-    }
-    if (Back.down) {
-      __position = __position - __direction * MOVE_SPEED
-    }
-
     if (Mouse.x != 0) {
       __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
     }
@@ -135,6 +116,34 @@ class Game {
     if (__angle < 0) {
       __angle = __angle + 360
     }
+    if (StrafeLeftBtn.down) {
+      __angle = __angle + StrafeLeftBtn.action
+    }
+    if (StrafeRightBtn.down) {
+      __angle = __angle + StrafeRightBtn.action
+    }
+    __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
+    __camera = __direction.perp
+
+    var move = Vec.new()
+    if (RightBtn.down) {
+      move = move + __direction.perp * MOVE_SPEED
+      // __position = __position + __direction.perp * MOVE_SPEED
+    }
+    if (LeftBtn.down) {
+      move = move - __direction.perp * MOVE_SPEED
+      // __position = __position - __direction.perp * MOVE_SPEED
+    }
+    if (Forward.down) {
+      move = move + __direction * MOVE_SPEED
+      // __position = __position + __direction * MOVE_SPEED
+    }
+    if (Back.down) {
+      move = move - __direction * MOVE_SPEED
+      // __position = __position - __direction * MOVE_SPEED
+    }
+    __position = __position + move.unit * MOVE_SPEED
+
 
     var solid = isTileHit(__position)
     if (!solid) {
@@ -149,8 +158,6 @@ class Game {
       __position = oldPosition
     }
 
-    __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
-    __camera = __direction.perp
 
     var castResult = castRay(__position, __direction, true)
     var targetPos = castResult[0]
@@ -272,6 +279,8 @@ class Game {
   }
 
   static draw(alpha) {
+    var centerX = Canvas.width / 2
+    var centerY = Canvas.height / 2
 
     var start
     start = System.clock
@@ -285,19 +294,19 @@ class Game {
     }
     // Floor casting
     // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
-      var localStart
-      var localEnd
-      var counter = 0
-      var posZ = 0.5 * Canvas.height
+    var localStart
+    var localEnd
+    var counter = 0
+    var posZ = 0.5 * Canvas.height
     if (DRAW_FLOORS || DRAW_CEILING) {
       var rayDir0 = __direction - __camera
       var rayDir1 = __direction + __camera
       var rdx = rayDir1.x - rayDir0.x
       var rdy = rayDir1.y - rayDir0.y
       // vertical camera position
-      for (y in 0...(Canvas.height / 2)) {
+      for (y in 0...centerY) {
         // Compute position compared to horizon
-        var p = (y - (Canvas.height / 2)).floor
+        var p = (y - (centerY)).floor
 
         // Horizontal distance from the camera to the floor for current row
         // Must be negative because of reasons
@@ -387,8 +396,8 @@ class Game {
         perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
       }
       var lineHeight = M.abs(Canvas.height / perpWallDistance)
-      var drawStart = (-lineHeight / 2) + (Canvas.height / 2)
-      var drawEnd = (lineHeight / 2) + (Canvas.height / 2)
+      var drawStart = (-lineHeight / 2) + (centerY)
+      var drawEnd = (lineHeight / 2) + (centerY)
       var alpha = 0.5
       //SET THE ZBUFFER FOR THE SPRITE CASTING
       __zBuffer[x] = perpWallDistance //perpendicular distance is used
@@ -425,7 +434,7 @@ class Game {
         // So we clip the drawStart-End and _then_ calculate the texture position.
         drawStart = M.max(0, drawStart)
         drawEnd = M.min(Canvas.height, drawEnd)
-        var texPos = (drawStart - Canvas.height / 2 + lineHeight / 2) * texStep
+        var texPos = (drawStart - centerY + lineHeight / 2) * texStep
         for (y in drawStart...drawEnd) {
           var texY = (texPos).floor
           // color = texture[(texY * texWidth + texX)]
@@ -520,8 +529,6 @@ class Game {
     ms = (System.clock - start) * 1000
 
 
-    var centerX = Canvas.width / 2
-    var centerY = Canvas.height / 2
     Canvas.line(centerX - 4, centerY, centerX + 4, centerY, Color.green, 1)
     Canvas.line(centerX, centerY - 4, centerX, centerY + 4, Color.green, 1)
 
