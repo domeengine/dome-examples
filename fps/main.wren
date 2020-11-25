@@ -65,7 +65,7 @@ var MAP = [
 
 class Game {
   static init() {
-    var SCALE = 4
+    var SCALE = 3
     Mouse.relative = true
     Mouse.hidden = true
     Canvas.resize(320, 200)
