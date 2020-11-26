@@ -8,7 +8,7 @@ import "./door" for Door
 import "./texture" for Texture
 
 var DRAW_FLOORS = true
-var DRAW_CEILING = false
+var DRAW_CEILING = true
 var VEC = Vec.new()
 
 var DIST_LOOKUP = []
