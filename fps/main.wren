@@ -7,7 +7,7 @@ import "./sprite" for Sprite, Pillar
 import "./door" for Door
 import "./texture" for Texture
 
-var DRAW_FLOORS = false
+var DRAW_FLOORS = true
 var DRAW_CEILING = false
 
 var PI_RAD = Num.pi / 180
@@ -97,8 +97,7 @@ class Game {
 
     __angle = 0
     __camera = Vec.new(-1, 0)
-    __zBuffer = List.filled(Canvas.width, Num.largest)
-    __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0] }.toList
+    __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0, 0] }.toList
     __dirty = true
   }
 
@@ -159,40 +158,44 @@ class Game {
       __position = oldPosition
     }
 
-    for (x in 0...Canvas.width) {
+    if (__dirty || __position != oldPosition) {
       var rayPosition = __position
-      var cameraX = 2 * (x / Canvas.width) - 1
-      var rayDirection = __direction + (__camera * cameraX)
-      var castResult = castRay(rayPosition, rayDirection, false)
-      var mapPos = castResult[0]
-      var side = castResult[1]
-      var stepDirection = castResult[2]
-      var tile = getTileAt(mapPos)
+      var castResult = [0, 0, 0]
+      for (x in 0...Canvas.width) {
+        var cameraX = 2 * (x / Canvas.width) - 1
+        var rayDirection = __direction + (__camera * cameraX)
+        castRay(castResult, rayPosition, rayDirection, false)
+        var mapPos = castResult[0]
+        var side = castResult[1]
+        var stepDirection = castResult[2]
+        var tile = getTileAt(mapPos)
 
-      var perpWallDistance
-      if (tile == 5) {
-        // If it's a door, we need to shift the map position to draw it in the correct location
-        if (side == 0) {
-          mapPos.x = mapPos.x + stepDirection.x / 2
-        } else {
-          mapPos.y = mapPos.y + stepDirection.y / 2
+        var perpWallDistance
+        if (tile == 5) {
+          // If it's a door, we need to shift the map position to draw it in the correct location
+          if (side == 0) {
+            mapPos.x = mapPos.x + stepDirection.x / 2
+          } else {
+            mapPos.y = mapPos.y + stepDirection.y / 2
+          }
         }
+        if (side == 0) {
+          perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
+        } else {
+          perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
+        }
+        //SET THE ZBUFFER FOR THE SPRITE CASTING
+        var ray = __rayBuffer[x]
+        ray[0] = perpWallDistance
+        ray[1] = mapPos
+        ray[2] = side
+        ray[3] = rayDirection
       }
-      if (side == 0) {
-        perpWallDistance = M.abs((mapPos.x - __position.x + (1 - stepDirection.x) / 2) / rayDirection.x)
-      } else {
-        perpWallDistance = M.abs((mapPos.y - __position.y + (1 - stepDirection.y) / 2) / rayDirection.y)
-      }
-      //SET THE ZBUFFER FOR THE SPRITE CASTING
-      __zBuffer[x] = perpWallDistance //perpendicular distance is used
-      var ray = __rayBuffer[x]
-      ray[0] = perpWallDistance
-      ray[1] = mapPos
-      ray[2] = side
     }
 
 
-    var castResult = castRay(__position, __direction, true)
+    var castResult = [0, 0, 0, 0]
+    castRay(castResult, __position, __direction, true)
     var targetPos = castResult[0]
     var dist = targetPos - __position
 
@@ -212,7 +215,7 @@ class Game {
     __dirty = true
   }
 
-  static castRay(rayPosition, rayDirection, ignoreDoors) {
+  static castRay(result, rayPosition, rayDirection, ignoreDoors) {
     var sideDistanceX = (1.0 + rayDirection.y.pow(2) / rayDirection.x.pow(2)).sqrt
     var sideDistanceY = (1.0 + rayDirection.x.pow(2) / rayDirection.y.pow(2)).sqrt
 
@@ -296,7 +299,10 @@ class Game {
         hit = tile > 0
       }
     }
-    return [ mapPos, side, stepDirection ]
+    result[0] = mapPos
+    result[1] = side
+    result[2] = stepDirection
+    return result
   }
 
   static isTileHit(pos) {
@@ -312,30 +318,37 @@ class Game {
   }
 
   static draw(alpha) {
-    var centerX = Canvas.width / 2
-    var centerY = Canvas.height / 2
+    var h = Canvas.height
+    var w = Canvas.width
+    var centerX = w / 2
+    var centerY = h / 2
 
     var start
     start = System.clock
-    if (!(DRAW_FLOORS && DRAW_CEILING)) {
-      cls()
-    }
-
-    var ms = 0
     if (!__dirty) {
       return
     }
+    cls()
+
+    var ms = 0
     // Floor casting
     // rayDir for leftmost ray (x = 0) and rightmost ray (x = w)
     var localStart
     var localEnd
     var counter = 0
-    var posZ = 0.5 * Canvas.height
     if (DRAW_FLOORS || DRAW_CEILING) {
-      var rayDir0 = __direction - __camera
-      var rayDir1 = __direction + __camera
-      var rdx = rayDir1.x - rayDir0.x
-      var rdy = rayDir1.y - rayDir0.y
+
+      /*
+      var posZ = centerY // 0.5 * Canvas.height
+      var rayDir0x = __direction.x - __camera.x
+      var rayDir0y = __direction.y - __camera.y
+      var rayDir1x = __direction.x + __camera.x
+      var rayDir1y = __direction.y + __camera.y
+      var rdx = (rayDir1x - rayDir0x) / Canvas.width
+      var rdy = (rayDir1y - rayDir0y) / Canvas.width
+      var floorTex = __floorTexture
+      var ceilTex = __ceilTexture
+      var floorPos = Vec.new()
       // vertical camera position
       for (y in 0...centerY) {
         // Compute position compared to horizon
@@ -343,18 +356,16 @@ class Game {
 
         // Horizontal distance from the camera to the floor for current row
         // Must be negative because of reasons
-        var rowDistance = M.min(-posZ / p, 50)
+        var rowDistance = M.min(-posZ / p, 15)
 
         // calculate the real world step vector we have to add for each x (parallel to camera plane)
         // adding step by step avoids multiplications with a weight in the inner loop
-        var floorStepX = ((rdx) * rowDistance) / Canvas.width
-        var floorStepY = ((rdy) * rowDistance) / Canvas.width
+        var floorStepX = ((rdx) * rowDistance)
+        var floorStepY = ((rdy) * rowDistance)
 
         // real world coordinates of the leftmost column. This will be updated as we step to the right.
-        var floorX = __position.x + rayDir0.x * rowDistance
-        var floorY = __position.y + rayDir0.y * rowDistance
-        var floorTex = __floorTexture
-        var ceilTex = __ceilTexture
+        var floorX = __position.x + rayDir0x * rowDistance
+        var floorY = __position.y + rayDir0y * rowDistance
 
         for (x in 0...Canvas.width) {
           counter = counter + 1
@@ -369,6 +380,10 @@ class Game {
 
           floorX = floorX + floorStepX
           floorY = floorY + floorStepY
+          floorPos.x = M.mid(0, cellX, MAP_WIDTH - 1)
+          floorPos.y = M.mid(0, cellY, MAP_HEIGHT - 1)
+          var tile =  MAP[MAP_WIDTH * floorPos.y + floorPos.x]
+          if (tile == 0 || tile == 5) {
 
           // draw floor
           var c
@@ -390,9 +405,11 @@ class Game {
             // Canvas.pset(x, y, c)
             CANVAS.pset(x, y, c)
           }
+          }
           // ms = ms + (localEnd - localStart)
         }
       }
+      */
     }
     localStart = System.clock
     localEnd = System.clock
@@ -402,14 +419,14 @@ class Game {
     // Wall casting
     var rayPosition = __position
     for (x in 0...Canvas.width) {
-      var cameraX = 2 * (x / Canvas.width) - 1
-      var rayDirection = __direction + (__camera * cameraX)
+      // var cameraX = 2 * (x / Canvas.width) - 1
+      // var rayDirection = __direction + (__camera * cameraX)
 
       var ray = __rayBuffer[x]
       var perpWallDistance = ray[0]
       var mapPos = ray[1]
       var side = ray[2]
-      // perpWallDistance = __zBuffer[x]
+      var rayDirection = ray[3]
 
       var color = Color.black
       var tile = getTileAt(mapPos)
@@ -420,6 +437,14 @@ class Game {
       var drawEnd = (lineHeight / 2) + (centerY)
       var alpha = 0.5
       //SET THE ZBUFFER FOR THE SPRITE CASTING
+
+      var wallX
+      if (side == 0) {
+        wallX = __position.y + perpWallDistance * rayDirection.y
+      } else {
+        wallX = __position.x + perpWallDistance * rayDirection.x
+      }
+      wallX = wallX - wallX.floor
 
       /*
       UNTEXTURED COLOR CHOOSER
@@ -432,13 +457,6 @@ class Game {
         }
         Canvas.line(x, drawStart, x, drawEnd, color)
       } else {
-        var wallX
-        if (side == 0) {
-          wallX = __position.y + perpWallDistance * rayDirection.y
-        } else {
-          wallX = __position.x + perpWallDistance * rayDirection.x
-        }
-        wallX = wallX - wallX.floor
         var texWidth = texture.width
         var texX = wallX * texWidth
         if (side == 0 && rayDirection.x <= 0) {
@@ -468,14 +486,52 @@ class Game {
           texPos = texPos + texStep
         }
       }
+      if (DRAW_FLOORS || DRAW_CEILING) {
+        var floorXWall
+        var floorYWall
+        if (side == 0) {
+          if (rayDirection.x > 0) {
+            floorXWall = mapPos.x
+            floorYWall = mapPos.y + wallX
+          } else {
+            floorXWall = mapPos.x + 1.0
+            floorYWall = mapPos.y + wallX
+          }
+        } else {
+          if (rayDirection.y > 0) {
+            floorXWall = mapPos.x + wallX
+            floorYWall = mapPos.y
+          } else {
+            floorXWall = mapPos.x + wallX
+            floorYWall = mapPos.y + 1.0
+          }
+        }
+        var distWall = perpWallDistance
+        var distPlayer = 0.0
+
+        if (drawEnd < 0) { drawEnd = h }
+        var floorTex = __floorTexture
+        var ceilTex = __ceilTexture
+        for (y in (drawEnd)...h) {
+          var currentDist = h / (2.0  * y - h)
+          var weight = (currentDist - distPlayer) / (distWall - distPlayer)
+          var currentFloorX = weight * floorXWall + (1.0 - weight) * __position.x
+          var currentFloorY = weight * floorYWall + (1.0 - weight) * __position.y
+          var floorTexX = ((currentFloorX * floorTex.width).floor % floorTex.width)
+          var floorTexY = ((currentFloorY * floorTex.height).floor % floorTex.height)
+          var ceilTexX = ((currentFloorX * ceilTex.width).floor % ceilTex.width)
+          var ceilTexY = ((currentFloorY * ceilTex.height).floor % ceilTex.height)
+          var c = floorTex.pget(floorTexX, floorTexY)
+          CANVAS.pset(x.floor, y.floor, c)
+          c = ceilTex.pget(ceilTexX, ceilTexY)
+          CANVAS.pset(x.floor, (h - y).floor, c)
+        }
+      }
     }
 
     // Sort sprites in place relative to the player position
-    sortSprites(__sprites, __position)
 
     var dir = __direction
-    var h = Canvas.height
-    var w = Canvas.width
     var cam = -__camera
     var invDet = 1.0 / (-cam.x * dir.y + dir.x * cam.y)
 
@@ -493,7 +549,7 @@ class Game {
 
       var vMoveScreen = (vMove / transformY).floor
 
-      var spriteScreenX = ((w / 2) * (1 + transformX / transformY)).floor
+      var spriteScreenX = ((centerX) * (1 + transformX / transformY)).floor
       // Prevent fisheye
       var spriteHeight = ((h / transformY).abs / vDiv).floor
       var drawStartY = (((h - spriteHeight) / 2) + vMoveScreen).floor
@@ -505,12 +561,13 @@ class Game {
         drawEndY = h
       }
 
-      var spriteWidth = (((h / transformY).abs / uDiv) / 2).floor
-      var drawStartX = (spriteScreenX - spriteWidth / 2).floor
+      // Optimisation note: this is actually half of spriteWidth, because we typically divide it by 2
+      var spriteWidth = (((h / transformY).abs / uDiv) / 2).floor / 2
+      var drawStartX = (spriteScreenX - spriteWidth).floor
       if (drawStartX < 0) {
         drawStartX = 0
       }
-      var drawEndX = (spriteScreenX + spriteWidth / 2).floor
+      var drawEndX = (spriteScreenX + spriteWidth).floor
       if (drawEndX >= w) {
         drawEndX = w - 1
       }
@@ -521,7 +578,7 @@ class Game {
 
       for (stripe in drawStartX...drawEndX) {
         //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
-        var texX = ((stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth).abs
+        var texX = ((stripe - (-spriteWidth + spriteScreenX)) * texWidth / (spriteWidth * 2)).abs
 
         // Conditions for this if:
         //1) it's in front of camera plane so you don't see things behind you
@@ -529,7 +586,7 @@ class Game {
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
         // TODO: stripe SHOULD be allowed to be 0
-        if (transformY > 0 && stripe > 0 && stripe < w && transformY < __zBuffer[stripe]) {
+        if (transformY > 0 && stripe > 0 && stripe < w && transformY < __rayBuffer[stripe][0]) {
           for (y in drawStartY...drawEndY) {
             var texY = (((y - vMoveScreen) - (-spriteHeight / 2 + h / 2)) * texHeight / spriteHeight).abs
             // System.print("%(texX) %(texY)")
@@ -588,13 +645,19 @@ class Game {
     }
   }
   static cls() {
-    for (y in 0...Canvas.height) {
-      for (x in 0...Canvas.width) {
-        var c = Color.lightgray
-        if (y > Canvas.height / 2) {
-          c = Color.darkgray
+    if (!(DRAW_FLOORS && DRAW_CEILING)) {
+      for (y in 0...Canvas.height / 2) {
+        for (x in 0...Canvas.width) {
+          var c
+          if (!DRAW_CEILING) {
+            c = Color.lightgray
+            CANVAS.pset(x, y, c)
+          }
+          if (!DRAW_FLOORS) {
+            c = Color.darkgray
+            CANVAS.pset(x, Canvas.height - y - 1, c)
+          }
         }
-        CANVAS.pset(x, y, c)
       }
     }
   }
