@@ -24,13 +24,17 @@ class Texture {
   height { _height }
 
   pget(x, y) {
-    x = M.mid(0, x, _iwidth).round
-    y = M.mid(0, y, _iheight).round
+    x = x.round % _width
+    y = y.round % _height
+    // x = M.mid(0, x, _iwidth).round
+    // y = M.mid(0, y, _iheight).round
     return _data[y * width + x]
   }
   pgetDark(x, y) {
-    x = M.mid(0, x, _iwidth).round
-    y = M.mid(0, y, _iheight).round
+    x = x.round % _width
+    y = y.round % _height
+    //x = M.mid(0, x, _iwidth).round
+    //y = M.mid(0, y, _iheight).round
     return _darker[y * width + x]
   }
 

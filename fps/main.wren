@@ -8,7 +8,10 @@ import "./door" for Door
 import "./texture" for Texture
 
 var DRAW_FLOORS = true
-var DRAW_CEILING = true
+var DRAW_CEILING = false
+var VEC = Vec.new()
+
+var DIST_LOOKUP = []
 
 var PI_RAD = Num.pi / 180
 
@@ -98,6 +101,9 @@ class Game {
     __angle = 0
     __camera = Vec.new(-1, 0)
     __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0, 0] }.toList
+    for (y in 0...Canvas.height) {
+      DIST_LOOKUP.add(Canvas.height / (2.0  * y - Canvas.height))
+    }
     __dirty = true
   }
 
@@ -122,7 +128,8 @@ class Game {
     if (StrafeRightBtn.down) {
       __angle = __angle + StrafeRightBtn.action
     }
-    __direction = Vec.new(M.cos(__angle * PI_RAD), M.sin(__angle * PI_RAD))
+    __direction.x = M.cos(__angle * PI_RAD)
+    __direction.y = M.sin(__angle * PI_RAD)
     __camera = __direction.perp
 
     var move = Vec.new()
@@ -324,7 +331,7 @@ class Game {
     var centerY = h / 2
 
     var start
-    start = System.clock
+    var end
     if (!__dirty) {
       return
     }
@@ -336,14 +343,14 @@ class Game {
     var localStart
     var localEnd
     var counter = 0
-    localStart = System.clock
-    localEnd = System.clock
     // ms = ms / counter * 1000
 
 
     // Wall casting
+    start = System.clock
     var rayPosition = __position
     for (x in 0...Canvas.width) {
+      counter = counter + 1
       var ray = __rayBuffer[x]
       var perpWallDistance = ray[0]
       var mapPos = ray[1]
@@ -429,16 +436,19 @@ class Game {
         var ceilTex = __ceilTexture
         drawEnd = drawEnd.floor
         for (y in (drawEnd)...h) {
-          var currentDist = h / (2.0  * y - h)
-          var weight = M.mid(0, currentDist / distWall, 1)
+          var currentDist = DIST_LOOKUP[y.floor]
+          var weight = currentDist / distWall
           var currentFloorX = weight * floorXWall + (1.0 - weight) * __position.x
           var currentFloorY = weight * floorYWall + (1.0 - weight) * __position.y
           var c
           if (DRAW_FLOORS) {
             var floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
             var floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
+            localStart = System.clock
             c = floorTex.pget(floorTexX, floorTexY)
+            localEnd = System.clock
             CANVAS.pset(x.floor, y.floor, c)
+            ms = ms + (localEnd - localStart)
           }
           if (DRAW_CEILING) {
             var ceilTexX = ((currentFloorX * (ceilTex.width)).floor % ceilTex.width)
@@ -497,7 +507,6 @@ class Game {
       var texture = sprite.textures[0]
       var texWidth = texture.width - 1
       var texHeight = texture.height - 1
-
       for (stripe in drawStartX...drawEndX) {
         //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
         var texX = ((stripe - (-spriteWidth + spriteScreenX)) * texWidth / (spriteWidth * 2)).abs
@@ -524,27 +533,32 @@ class Game {
       }
     }
     flip()
-    ms = (System.clock - start) * 1000
 
 
     Canvas.line(centerX - 4, centerY, centerX + 4, centerY, Color.green, 1)
     Canvas.line(centerX, centerY - 4, centerX, centerY + 4, Color.green, 1)
 
+    //ms = (end - start)
+    //ms = ms / counter
     Canvas.print(__angle, 0, 0, Color.white)
-    Canvas.print(ms, 0, Canvas.height - 8, Color.white)
+    Canvas.print(ms * 1000, 0, Canvas.height - 8, Color.white)
     __dirty = false
   }
 
   static getTileAt(position) {
-    var pos = Vec.new(position.x.floor, position.y.floor)
+    VEC.x = position.x.floor
+    VEC.y = position.y.floor
+    var pos = VEC
     if (pos.x >= 0 && pos.x < MAP_WIDTH && pos.y >= 0 && pos.y < MAP_HEIGHT) {
       return MAP[MAP_WIDTH * pos.y + pos.x]
     }
     return 1
   }
 
-  static getDoorAt(pos) {
-    var mapPos = Vec.new(pos.x.floor, pos.y.floor)
+  static getDoorAt(position) {
+    VEC.x = position.x.floor
+    VEC.y = position.y.floor
+    var mapPos = VEC
     for (door in DOORS) {
       if (door.pos == mapPos) {
         return door
@@ -558,7 +572,7 @@ class Game {
     while (i < list.count) {
       var x = list[i]
       var j = i - 1
-      while (j >= 0 && (list[j].pos-position).length < (x.pos-position).length) {
+      while (j >= 0 && (list[j].pos - position).length < (x.pos - position).length) {
         list[j + 1] = list[j]
         j = j - 1
       }
