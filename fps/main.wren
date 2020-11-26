@@ -8,7 +8,7 @@ import "./door" for Door
 import "./texture" for Texture
 
 var DRAW_FLOORS = true
-var DRAW_CEILING = false
+var DRAW_CEILING = true
 
 var PI_RAD = Num.pi / 180
 
@@ -336,81 +336,6 @@ class Game {
     var localStart
     var localEnd
     var counter = 0
-    if (DRAW_FLOORS || DRAW_CEILING) {
-
-      /*
-      var posZ = centerY // 0.5 * Canvas.height
-      var rayDir0x = __direction.x - __camera.x
-      var rayDir0y = __direction.y - __camera.y
-      var rayDir1x = __direction.x + __camera.x
-      var rayDir1y = __direction.y + __camera.y
-      var rdx = (rayDir1x - rayDir0x) / Canvas.width
-      var rdy = (rayDir1y - rayDir0y) / Canvas.width
-      var floorTex = __floorTexture
-      var ceilTex = __ceilTexture
-      var floorPos = Vec.new()
-      // vertical camera position
-      for (y in 0...centerY) {
-        // Compute position compared to horizon
-        var p = (y - (centerY)).floor
-
-        // Horizontal distance from the camera to the floor for current row
-        // Must be negative because of reasons
-        var rowDistance = M.min(-posZ / p, 15)
-
-        // calculate the real world step vector we have to add for each x (parallel to camera plane)
-        // adding step by step avoids multiplications with a weight in the inner loop
-        var floorStepX = ((rdx) * rowDistance)
-        var floorStepY = ((rdy) * rowDistance)
-
-        // real world coordinates of the leftmost column. This will be updated as we step to the right.
-        var floorX = __position.x + rayDir0x * rowDistance
-        var floorY = __position.y + rayDir0y * rowDistance
-
-        for (x in 0...Canvas.width) {
-          counter = counter + 1
-
-          // the cell coord is simply got from the integer parts of floorX and floorY
-          var cellX = floorX.floor
-          var cellY = floorY.floor
-
-          // get the texture coordinate from the fractional part
-          var diffX = floorX - cellX
-          var diffY = floorY - cellY
-
-          floorX = floorX + floorStepX
-          floorY = floorY + floorStepY
-          floorPos.x = M.mid(0, cellX, MAP_WIDTH - 1)
-          floorPos.y = M.mid(0, cellY, MAP_HEIGHT - 1)
-          var tile =  MAP[MAP_WIDTH * floorPos.y + floorPos.x]
-          if (tile == 0 || tile == 5) {
-
-          // draw floor
-          var c
-          if (DRAW_FLOORS) {
-            var floorTexX = ((floorTex.width - 1) * diffX)
-            var floorTexY = ((floorTex.height - 1) * diffY)
-            //var c = floorTex[(floorTexY * (floorTex.width) + floorTexX).floor]
-            c = floorTex.pget(floorTexX, floorTexY)
-            // Canvas.pset(x, Canvas.height - y - 1, c)
-            CANVAS.pset(x, (Canvas.height - y - 1), c)
-          }
-
-          // draw ceiling
-          if (DRAW_CEILING) {
-            var ceilTexX = ((ceilTex.width - 1) * diffX)
-            var ceilTexY = ((ceilTex.height - 1) * diffY)
-            // c = ceilTex[(ceilTexY * ceilTex.width + ceilTexX).floor]
-            c = ceilTex.pget(ceilTexX, ceilTexY)
-            // Canvas.pset(x, y, c)
-            CANVAS.pset(x, y, c)
-          }
-          }
-          // ms = ms + (localEnd - localStart)
-        }
-      }
-      */
-    }
     localStart = System.clock
     localEnd = System.clock
     // ms = ms / counter * 1000
@@ -419,9 +344,6 @@ class Game {
     // Wall casting
     var rayPosition = __position
     for (x in 0...Canvas.width) {
-      // var cameraX = 2 * (x / Canvas.width) - 1
-      // var rayDirection = __direction + (__camera * cameraX)
-
       var ray = __rayBuffer[x]
       var perpWallDistance = ray[0]
       var mapPos = ray[1]
@@ -489,42 +411,42 @@ class Game {
       if (DRAW_FLOORS || DRAW_CEILING) {
         var floorXWall
         var floorYWall
-        if (side == 0) {
-          if (rayDirection.x > 0) {
-            floorXWall = mapPos.x
-            floorYWall = mapPos.y + wallX
-          } else {
-            floorXWall = mapPos.x + 1.0
-            floorYWall = mapPos.y + wallX
-          }
+        if (side == 0 && rayDirection.x > 0) {
+          floorXWall = mapPos.x
+          floorYWall = mapPos.y + wallX
+        } else if (side == 0 && rayDirection.x < 0) {
+          floorXWall = mapPos.x + 1.0
+          floorYWall = mapPos.y + wallX
+        } else if (side == 1 && rayDirection.y > 0) {
+          floorXWall = mapPos.x + wallX
+          floorYWall = mapPos.y
         } else {
-          if (rayDirection.y > 0) {
-            floorXWall = mapPos.x + wallX
-            floorYWall = mapPos.y
-          } else {
-            floorXWall = mapPos.x + wallX
-            floorYWall = mapPos.y + 1.0
-          }
+          floorXWall = mapPos.x + wallX
+          floorYWall = mapPos.y + 1.0
         }
         var distWall = perpWallDistance
-        var distPlayer = 0.0
-
-        if (drawEnd < 0) { drawEnd = h }
         var floorTex = __floorTexture
         var ceilTex = __ceilTexture
+        drawEnd = drawEnd.floor
         for (y in (drawEnd)...h) {
           var currentDist = h / (2.0  * y - h)
-          var weight = (currentDist - distPlayer) / (distWall - distPlayer)
+          var weight = M.mid(0, currentDist / distWall, 1)
           var currentFloorX = weight * floorXWall + (1.0 - weight) * __position.x
           var currentFloorY = weight * floorYWall + (1.0 - weight) * __position.y
-          var floorTexX = ((currentFloorX * floorTex.width).floor % floorTex.width)
-          var floorTexY = ((currentFloorY * floorTex.height).floor % floorTex.height)
-          var ceilTexX = ((currentFloorX * ceilTex.width).floor % ceilTex.width)
-          var ceilTexY = ((currentFloorY * ceilTex.height).floor % ceilTex.height)
-          var c = floorTex.pget(floorTexX, floorTexY)
-          CANVAS.pset(x.floor, y.floor, c)
-          c = ceilTex.pget(ceilTexX, ceilTexY)
-          CANVAS.pset(x.floor, (h - y).floor, c)
+          var c
+          if (DRAW_FLOORS) {
+            var floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
+            var floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
+            c = floorTex.pget(floorTexX, floorTexY)
+            CANVAS.pset(x.floor, y.floor, c)
+          }
+          if (DRAW_CEILING) {
+            var ceilTexX = ((currentFloorX * (ceilTex.width)).floor % ceilTex.width)
+            var ceilTexY = ((currentFloorY * (ceilTex.height)).floor % ceilTex.height)
+
+            c = ceilTex.pget(ceilTexX, ceilTexY)
+            CANVAS.pset(x.floor, (h - y.floor - 1), c)
+          }
         }
       }
     }
