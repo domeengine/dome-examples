@@ -1,5 +1,7 @@
 import "./texture" for Texture
-import "math" for M
+import "math" for M, Vec
+import "input" for Keyboard, Mouse
+import "./keys" for InputGroup
 
 var PI_RAD = Num.pi / 180
 
@@ -16,10 +18,10 @@ class Entity {
 }
 
 class Player is Entity {
-  construct new(position, direction) {
+  construct new(position, angle) {
     super(position)
-    _dir = direction
-    _angle = direction.y.atan(direction.x)
+    _dir = Vec.new()
+    this.angle = angle
   }
 
   angle { _angle }
@@ -51,24 +53,38 @@ class Sprite is Entity {
   }
 
   textures { _textures }
-  currentTex { _textures[_octant % _textures.count] }
-
-  update(context) {
-    super(context)
-    var playerPos = pos - context.player.pos
-    var angle = playerPos.y.atan(playerPos.x) / PI_RAD + 180
-    var segmentSize = 360 / _textures.count
-    _octant = (angle / segmentSize).round % _textures.count
-  }
+  octant { _octant }
+  octant=(v) { _octant = v % _textures.count }
+  currentTex { _textures[octant] }
 
   uDiv { 1 }
   vDiv { 1 }
   vMove { 0 }
 }
 
-class Pillar is Sprite {
+class DirectionalSprite is Sprite {
+  construct new(pos, textures) {
+    super(pos, textures)
+    _segmentSize = 360 / textures.count
+  }
+
+  update(context) {
+    super(context)
+    var playerPos = pos - context.player.pos
+    var angle = (playerPos.y.atan(playerPos.x) / PI_RAD + 360 - _segmentSize / 2) % 360
+    octant = (angle / _segmentSize).round
+  }
+}
+
+class Person is DirectionalSprite {
   construct new(pos) {
-    super(pos, [Texture.importImg("./column.png"), Texture.importImg("./column2.png")])
+    super(pos, (8..1).map {|n| Texture.importImg("./DUMMY%(n).png")}.toList)
+  }
+  solid { true }
+}
+class Pillar is DirectionalSprite {
+  construct new(pos) {
+    super(pos, Texture.importImg("./column.png"))
   }
   solid { true }
   vMove { 0 }

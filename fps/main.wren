@@ -3,18 +3,16 @@ import "dome" for Window, Process
 import "math" for Vec, M
 import "input" for Keyboard, Mouse
 import "./keys" for InputGroup
-import "./sprite" for Sprite, Pillar, Player
+import "./sprite" for Sprite, Pillar, Player, Person
 import "./door" for Door
 import "./context" for World
 import "./texture" for Texture
 
-var DRAW_FLOORS = true
+var DRAW_FLOORS = false
 var DRAW_CEILING = true
 var VEC = Vec.new()
 
 var DIST_LOOKUP = []
-
-var PI_RAD = Num.pi / 180
 
 var SPEED = 0.001
 var MOVE_SPEED = 2/ 60
@@ -80,10 +78,11 @@ class Game {
     // CANVAS = List.filled(Canvas.width * Canvas.height, Color.none)
     CANVAS = ImageData.create("buffer", Canvas.width, Canvas.height)
     Window.resize(SCALE*Canvas.width, SCALE*Canvas.height)
-    __player = Player.new(Vec.new(7, 11), Vec.new(0, -1))
+    __player = Player.new(Vec.new(7, 11), 0)
     __sprites = [
       //Pillar.new(Vec.new(8, 13)),
-      Pillar.new(Vec.new(9, 15))
+      //Pillar.new(Vec.new(9, 15)),
+      Person.new(Vec.new(8, 13))
     ]
     __doors = DOORS
     __map = MAP
@@ -117,16 +116,14 @@ class Game {
     __dirty = true
   }
 
-
   static update() {
+    __player.update(__world)
     var oldPosition = __position
     if (Keyboard.isKeyDown("escape")) {
       Process.exit()
     }
 
-    if (Mouse.x != 0) {
-      __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
-    }
+    __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
     if (StrafeLeftBtn.down) {
       __angle = __angle + StrafeLeftBtn.action
     }
@@ -134,7 +131,11 @@ class Game {
       __angle = __angle + StrafeRightBtn.action
     }
     __player.angle = __angle
-    __camera = __direction.perp
+    __angle = __player.angle
+    __camera.x = -__player.dir.y
+    __camera.y = __player.dir.x
+    __direction = __player.dir
+    // __camera = __direction.perp
 
     var move = Vec.new()
     if (RightBtn.down) {
@@ -156,7 +157,6 @@ class Game {
     __player.pos = __player.pos + move.unit * MOVE_SPEED
 
     __position = __player.pos
-    __direction = __player.dir
 
 
     var solid = isTileHit(__position)
@@ -206,6 +206,9 @@ class Game {
         ray[3] = rayDirection
       }
     }
+    __sprites.each {|sprite| sprite.update(__world) }
+    // TODO sprite update
+    sortSprites(__sprites, __position)
 
 
     var castResult = [0, 0, 0, 0]
@@ -225,9 +228,6 @@ class Game {
       door.update()
     }
 
-    __sprites.each {|sprite| sprite.update(__world) }
-    // TODO sprite update
-    sortSprites(__sprites, __position)
     __dirty = true
   }
 
