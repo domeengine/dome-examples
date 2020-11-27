@@ -3,8 +3,9 @@ import "dome" for Window, Process
 import "math" for Vec, M
 import "input" for Keyboard, Mouse
 import "./keys" for InputGroup
-import "./sprite" for Sprite, Pillar
+import "./sprite" for Sprite, Pillar, Player
 import "./door" for Door
+import "./context" for World
 import "./texture" for Texture
 
 var DRAW_FLOORS = true
@@ -79,12 +80,22 @@ class Game {
     // CANVAS = List.filled(Canvas.width * Canvas.height, Color.none)
     CANVAS = ImageData.create("buffer", Canvas.width, Canvas.height)
     Window.resize(SCALE*Canvas.width, SCALE*Canvas.height)
+    __player = Player.new(Vec.new(7, 11), Vec.new(0, -1))
     __sprites = [
-      Pillar.new(Vec.new(8, 13)),
+      //Pillar.new(Vec.new(8, 13)),
       Pillar.new(Vec.new(9, 15))
     ]
-    __position = Vec.new(7, 11)
-    __direction = Vec.new(0, -1)
+    __doors = DOORS
+    __map = MAP
+    __position = __player.pos
+    __direction = __player.dir
+    __angle = 0
+
+    __world = World.new()
+    __world.entities = __sprites
+    __world.doors = __doors
+    __world.player = __player
+    __world.map = __map
     // Map data
     // - Map arrangement
     // - Textures for map
@@ -98,7 +109,6 @@ class Game {
     }
     __textures.add(Texture.importImg("door.png"))
 
-    __angle = 0
     __camera = Vec.new(-1, 0)
     __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0, 0] }.toList
     for (y in 0...Canvas.height) {
@@ -117,28 +127,22 @@ class Game {
     if (Mouse.x != 0) {
       __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
     }
-
-    __angle = __angle % 360
-    if (__angle < 0) {
-      __angle = __angle + 360
-    }
     if (StrafeLeftBtn.down) {
       __angle = __angle + StrafeLeftBtn.action
     }
     if (StrafeRightBtn.down) {
       __angle = __angle + StrafeRightBtn.action
     }
-    __direction.x = M.cos(__angle * PI_RAD)
-    __direction.y = M.sin(__angle * PI_RAD)
+    __player.angle = __angle
     __camera = __direction.perp
 
     var move = Vec.new()
     if (RightBtn.down) {
-      move = move + __direction.perp * MOVE_SPEED
+      move = move + __camera * MOVE_SPEED
       // __position = __position + __direction.perp * MOVE_SPEED
     }
     if (LeftBtn.down) {
-      move = move - __direction.perp * MOVE_SPEED
+      move = move - __camera * MOVE_SPEED
       // __position = __position - __direction.perp * MOVE_SPEED
     }
     if (Forward.down) {
@@ -149,7 +153,10 @@ class Game {
       move = move - __direction * MOVE_SPEED
       // __position = __position - __direction * MOVE_SPEED
     }
-    __position = __position + move.unit * MOVE_SPEED
+    __player.pos = __player.pos + move.unit * MOVE_SPEED
+
+    __position = __player.pos
+    __direction = __player.dir
 
 
     var solid = isTileHit(__position)
@@ -211,12 +218,14 @@ class Game {
         getDoorAt(targetPos).open()
       }
     }
-    DOORS.each {|door|
+    __doors.each {|door|
       if ((door.pos - __position).length >= 2.75) {
         door.close()
       }
       door.update()
     }
+
+    __sprites.each {|sprite| sprite.update(__world) }
     // TODO sprite update
     sortSprites(__sprites, __position)
     __dirty = true
@@ -504,7 +513,7 @@ class Game {
         drawEndX = w - 1
       }
 
-      var texture = sprite.textures[0]
+      var texture = sprite.currentTex
       var texWidth = texture.width - 1
       var texHeight = texture.height - 1
       for (stripe in drawStartX...drawEndX) {
@@ -550,7 +559,7 @@ class Game {
     VEC.y = position.y.floor
     var pos = VEC
     if (pos.x >= 0 && pos.x < MAP_WIDTH && pos.y >= 0 && pos.y < MAP_HEIGHT) {
-      return MAP[MAP_WIDTH * pos.y + pos.x]
+      return __map[MAP_WIDTH * pos.y + pos.x]
     }
     return 1
   }
@@ -559,7 +568,7 @@ class Game {
     VEC.x = position.x.floor
     VEC.y = position.y.floor
     var mapPos = VEC
-    for (door in DOORS) {
+    for (door in __doors) {
       if (door.pos == mapPos) {
         return door
       }
