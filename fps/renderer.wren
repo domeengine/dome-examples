@@ -8,12 +8,12 @@ var DARK_NULL_COLOR = Color.rgb(NULL_COLOR.r * alpha, NULL_COLOR.g * alpha, NULL
 
 class Renderer {
   construct init(world, width, height) {
+    _world = world
     _w = width
     _h = height
     _halfW = _w / 2
     _halfH = _h / 2
     _canvas = ImageData.create("buffer", _w, _h)
-    _world = world
 
     _camera = Vec.new(-1, 0)
     _rayBuffer = List.filled(_w, null).map { [0, 0, 0, 0] }.toList
@@ -97,7 +97,6 @@ class Renderer {
     var localEnd
     var counter = 0
     // ms = ms / counter * 1000
-
 
     // Wall casting
     var rayPosition = _world.player.pos
@@ -187,12 +186,47 @@ class Renderer {
         var floorTex = _floorTexture
         var ceilTex = _ceilingTexture
         drawEnd = drawEnd.floor
+        localStart = System.clock
         for (y in (drawEnd)..._h) {
           var currentDist = _DIST_LOOKUP[y.floor]
           var weight = currentDist / distWall
           var currentFloorX = weight * floorXWall + (1.0 - weight) * rayPosition.x
           var currentFloorY = weight * floorYWall + (1.0 - weight) * rayPosition.y
           var c
+          var floorTexX
+          var floorTexY
+          var ceilTexX
+          var ceilTexY
+          if (_drawFloor && _drawCeiling) {
+            floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
+            if (floorTex.width == ceilTex.width) {
+              ceilTexX = floorTexX
+            } else {
+              ceilTexX = ((currentFloorX * (ceilTex.width)).floor % ceilTex.width)
+            }
+            floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
+            if (floorTex.height == ceilTex.height) {
+              ceilTexY = floorTexY
+            } else {
+              ceilTexY = ((currentFloorY * (ceilTex.height)).floor % ceilTex.height)
+            }
+          } else if (_drawFloor) {
+            floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
+            floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
+          } else if (_drawCeiling) {
+            ceilTexX = ((currentFloorX * (ceilTex.width)).floor % ceilTex.width)
+            ceilTexY = ((currentFloorY * (ceilTex.height)).floor % ceilTex.height)
+          }
+          if (_drawFloor) {
+            c = floorTex.pget(floorTexX, floorTexY)
+            _canvas.pset(x.floor, y.floor, c)
+          }
+          if (_drawCeiling) {
+            c = ceilTex.pget(ceilTexX, ceilTexY)
+            _canvas.pset(x.floor, (_h - y.floor - 1), c)
+          }
+          /*
+
           if (_drawFloor) {
             var floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
             var floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
@@ -206,12 +240,12 @@ class Renderer {
             c = ceilTex.pget(ceilTexX, ceilTexY)
             _canvas.pset(x.floor, (_h - y.floor - 1), c)
           }
+          */
         }
+        localEnd = System.clock
+        ms = ms + (localEnd - localStart)
       }
     }
-    localStart = System.clock
-    localEnd = System.clock
-    ms = ms + (localEnd - localStart)
 
     var dir = _world.player.dir
     var cam = -_camera
@@ -265,7 +299,6 @@ class Renderer {
         //2) it's on the screen (left)
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
-        // TODO: stripe SHOULD be allowed to be 0
         if (transformY > 0 && stripe >= 0 && stripe < _w && transformY < _rayBuffer[stripe][0]) {
           for (y in drawStartY...drawEndY) {
             var texY = (((y - vMoveScreen) - (-spriteHeight / 2 + _h / 2)) * texHeight / spriteHeight).abs
