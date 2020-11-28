@@ -39,45 +39,51 @@ class Player is Entity {
   }
 
   update(context) {
-    vel = vel.unit * MOVE_SPEED
+    this.vel = this.vel.unit * MOVE_SPEED
 
     var solid
-    var originalPosition = this.pos * 1
     var oldPosition = VEC
     oldPosition.x = this.pos.x
     oldPosition.y = this.pos.y
 
-    pos.x = pos.x + vel.x
+    this.pos.x = this.pos.x + this.vel.x
     solid = context.isTileHit(pos)
-    if (solid) {
-      this.pos.x = oldPosition.x
-      this.pos.y = oldPosition.y
-    }
-
-    oldPosition.x = this.pos.x
-    oldPosition.y = this.pos.y
-
-    pos.y = pos.y + vel.y
-    solid = context.isTileHit(this.pos)
-    if (solid) {
-      this.pos.x = oldPosition.x
-      this.pos.y = oldPosition.y
-      solid = false
-    }
-    oldPosition.x = this.pos.x
-    oldPosition.y = this.pos.y
-
     if (!solid) {
       for (entity in context.entities) {
         if ((entity.pos - this.pos).length < 0.5) {
           solid = solid || entity.solid
         }
+        if (solid) {
+          break
+        }
       }
     }
-
     if (solid) {
-      this.pos = originalPosition
+      this.pos.x = oldPosition.x
+      this.pos.y = oldPosition.y
     }
+
+    oldPosition.x = this.pos.x
+    oldPosition.y = this.pos.y
+
+    this.pos.y = this.pos.y + this.vel.y
+    solid = context.isTileHit(this.pos)
+    if (!solid) {
+      for (entity in context.entities) {
+        if ((entity.pos - this.pos).length < 0.5) {
+          solid = solid || entity.solid
+        }
+        if (solid) {
+          break
+        }
+      }
+    }
+    if (solid) {
+      this.pos.x = oldPosition.x
+      this.pos.y = oldPosition.y
+    }
+    oldPosition.x = this.pos.x
+    oldPosition.y = this.pos.y
   }
 
   getTarget(context) {
