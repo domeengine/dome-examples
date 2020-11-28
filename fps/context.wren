@@ -33,8 +33,8 @@ class World {
 
   floorTexture { _floorTexture }
   floorTexture=(v) { _floorTexture = v }
-  ceilTexture { _ceilTexture }
-  ceilTexture=(v) { _ceilTexture = v }
+  ceilingTexture { _ceilTexture }
+  ceilingTexture=(v) { _ceilTexture = v }
 
   update() {
     player.update(this)

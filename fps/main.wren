@@ -9,12 +9,6 @@ import "./context" for World, TileMap
 import "./texture" for Texture
 import "./renderer" for Renderer
 
-var DRAW_FLOORS = false
-var DRAW_CEILING = true
-var VEC = Vec.new()
-
-var DIST_LOOKUP = []
-
 var SPEED = 0.001
 var Interact = InputGroup.new([ Mouse["left"], Keyboard["e"], Keyboard["space"] ], SPEED)
 var Forward = InputGroup.new(Keyboard["w"], SPEED)
@@ -39,7 +33,7 @@ var MAP = [
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
-    2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
+    6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,3,1,1,1,1,1,3,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
     2,0,2,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,2,
@@ -94,13 +88,14 @@ class Game {
     __textures = []
     __world.textures = __textures
     __renderer = Renderer.init(__world, 320, 200)
+
     // Map data
     // - Map arrangement
     // - Textures for map
 
     // Prepare textures
-    __world.floorTexture = Texture.importImg("floor.png")
-    __world.ceilTexture = Texture.importImg("ceil.png")
+    //__world.floorTexture = Texture.importImg("floor.png")
+    //__world.ceilTexture = Texture.importImg("ceil.png")
     for (i in 1..4) {
       __textures.add(Texture.importImg("wall%(i).png"))
     }
@@ -149,11 +144,11 @@ class Game {
     var dist = targetPos - __player.pos
 
     if (Interact.firing) {
-      if (__world.getTileAt(targetPos) == 5 && dist.length < 2.75) {
-        __world.getDoorAt(targetPos).open()
+      var door = __world.getDoorAt(targetPos)
+      if (door != null && dist.length < 2.75) {
+        door.open()
       }
     }
-
 
     __dirty = true
     __renderer.update()

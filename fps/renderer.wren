@@ -1,9 +1,10 @@
 import "graphics" for ImageData, Canvas, Color
 import "math" for Vec, M
 
-var DRAW_FLOORS = false
-var DRAW_CEILING = true
+var alpha = 0.5
 var VEC = Vec.new()
+var NULL_COLOR = Color.pink
+var DARK_NULL_COLOR = Color.rgb(NULL_COLOR.r * alpha, NULL_COLOR.g * alpha, NULL_COLOR.b * alpha)
 
 class Renderer {
   construct init(world, width, height) {
@@ -21,6 +22,19 @@ class Renderer {
       _DIST_LOOKUP.add(_h / (2.0  * y - _h))
     }
     _dirty = true
+    floors = _world.floorTexture
+    ceilings = _world.ceilingTexture
+  }
+
+  width { _w }
+  height { _h }
+  floors=(v) {
+    _drawFloor = v != null && !(v is Color)
+    _floorTexture = v != null ? v : Color.darkgray
+  }
+  ceilings=(v) {
+    _drawCeiling = v != null && !(v is Color)
+    _ceilingTexture  = v != null ? v : Color.lightgray
   }
 
   update() {
@@ -97,13 +111,18 @@ class Renderer {
 
       var color = Color.black
       var tile = _world.getTileAt(mapPos)
-      var texture = _world.textures[tile - 1]
+      var texture
+      Fiber.new {
+        texture = _world.textures[tile - 1]
+      }.try()
 
       var lineHeight = M.abs(_h / perpWallDistance)
       var drawStart = (-lineHeight / 2) + (_halfH)
       var drawEnd = (lineHeight / 2) + (_halfH)
-      var alpha = 0.5
-      //SET THE ZBUFFER FOR THE SPRITE CASTING
+      // If we are too close to a block, the lineHeight is gigantic, resulting in slowness
+      // So we clip the drawStart-End and _then_ calculate the texture position.
+      drawStart = M.max(0, drawStart)
+      drawEnd = M.min(_h, drawEnd)
 
       var wallX
       if (side == 0) {
@@ -118,11 +137,13 @@ class Renderer {
       */
       if (texture == null) {
         // WORST CASE
-        color = Color.pink
+        color = NULL_COLOR
         if (side == 1) {
-          color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
+          color = DARK_NULL_COLOR
         }
-        Canvas.line(x, drawStart, x, drawEnd, color)
+        for (y in drawStart...drawEnd) {
+          _canvas.pset(x, y, color)
+        }
       } else {
         var texWidth = texture.width
         var texX = wallX * texWidth
@@ -134,26 +155,19 @@ class Renderer {
         }
         texX = texX.floor
         var texStep = 1.0 * texture.height / lineHeight
-        // If we are too close to a block, the lineHeight is gigantic, resulting in slowness
-        // So we clip the drawStart-End and _then_ calculate the texture position.
-        drawStart = M.max(0, drawStart)
-        drawEnd = M.min(_h, drawEnd)
         var texPos = (drawStart - _halfH + lineHeight / 2) * texStep
         for (y in drawStart...drawEnd) {
           var texY = (texPos).floor
-          // color = texture[(texY * texWidth + texX)]
           if (side == 1) {
             color = texture.pgetDark(texX, texY)
-            //color = Color.rgb(color.r * alpha, color.g * alpha, color.b * alpha)
           } else {
             color = texture.pget(texX, texY)
           }
-          // Canvas.pset(x, y, color)
           _canvas.pset(x, y, color)
           texPos = texPos + texStep
         }
       }
-      if (DRAW_FLOORS || DRAW_CEILING) {
+      if (_drawFloor || _drawCeiling) {
         var floorXWall
         var floorYWall
         if (side == 0 && rayDirection.x > 0) {
@@ -170,8 +184,8 @@ class Renderer {
           floorYWall = mapPos.y + 1.0
         }
         var distWall = perpWallDistance
-        var floorTex = _world.floorTexture
-        var ceilTex = _world.ceilTexture
+        var floorTex = _floorTexture
+        var ceilTex = _ceilingTexture
         drawEnd = drawEnd.floor
         for (y in (drawEnd)..._h) {
           var currentDist = _DIST_LOOKUP[y.floor]
@@ -179,16 +193,13 @@ class Renderer {
           var currentFloorX = weight * floorXWall + (1.0 - weight) * rayPosition.x
           var currentFloorY = weight * floorYWall + (1.0 - weight) * rayPosition.y
           var c
-          if (DRAW_FLOORS) {
+          if (_drawFloor) {
             var floorTexX = ((currentFloorX * (floorTex.width)).floor % (floorTex.width))
             var floorTexY = ((currentFloorY * (floorTex.height)).floor % (floorTex.height))
-            localStart = System.clock
             c = floorTex.pget(floorTexX, floorTexY)
-            localEnd = System.clock
             _canvas.pset(x.floor, y.floor, c)
-            ms = ms + (localEnd - localStart)
           }
-          if (DRAW_CEILING) {
+          if (_drawCeiling) {
             var ceilTexX = ((currentFloorX * (ceilTex.width)).floor % ceilTex.width)
             var ceilTexY = ((currentFloorY * (ceilTex.height)).floor % ceilTex.height)
 
@@ -198,8 +209,9 @@ class Renderer {
         }
       }
     }
-
-    // Sort sprites in place relative to the player position
+    localStart = System.clock
+    localEnd = System.clock
+    ms = ms + (localEnd - localStart)
 
     var dir = _world.player.dir
     var cam = -_camera
@@ -232,7 +244,7 @@ class Renderer {
       }
 
       // Optimisation note: this is actually half of spriteWidth, because we typically divide it by 2
-      var spriteWidth = (((_h / transformY).abs / uDiv) / 2).floor / 2
+      var spriteWidth = (((_h / transformY).abs / uDiv) / 2).floor
       var drawStartX = (spriteScreenX - spriteWidth).floor
       if (drawStartX < 0) {
         drawStartX = 0
@@ -246,7 +258,6 @@ class Renderer {
       var texWidth = texture.width - 1
       var texHeight = texture.height - 1
       for (stripe in drawStartX...drawEndX) {
-        //  int texX = int(256 * (stripe - (-spriteWidth / 2 + spriteScreenX)) * texWidth / spriteWidth) / 256;
         var texX = ((stripe - (-spriteWidth + spriteScreenX)) * texWidth / (spriteWidth * 2)).abs
 
         // Conditions for this if:
@@ -255,14 +266,10 @@ class Renderer {
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
         // TODO: stripe SHOULD be allowed to be 0
-        if (transformY > 0 && stripe > 0 && stripe < _w && transformY < _rayBuffer[stripe][0]) {
+        if (transformY > 0 && stripe >= 0 && stripe < _w && transformY < _rayBuffer[stripe][0]) {
           for (y in drawStartY...drawEndY) {
             var texY = (((y - vMoveScreen) - (-spriteHeight / 2 + _h / 2)) * texHeight / spriteHeight).abs
-            // System.print("%(texX) %(texY)")
-            // var texY = ((y - drawStartY) / spriteHeight) * texHeight
             var color = texture.pget(texX, texY)
-            //var color = texture[(texY * texture.width + texX)]
-            // Canvas.pset(stripe, y, color)
             if (color.a != 0) {
               _canvas.pset(stripe, y.floor, color)
             }
@@ -272,20 +279,19 @@ class Renderer {
     }
     flip()
     Canvas.print(ms * 1000, 0, _h - 8, Color.white)
-
   }
 
   cls() {
-    if (!(DRAW_FLOORS && DRAW_CEILING)) {
+    if (!(_drawFloor && _drawCeiling)) {
       for (y in 0..._halfH) {
         for (x in 0..._w) {
           var c
-          if (!DRAW_CEILING) {
-            c = Color.lightgray
+          if (!_drawCeiling) {
+            c = _ceilingTexture
             _canvas.pset(x, y, c)
           }
-          if (!DRAW_FLOORS) {
-            c = Color.darkgray
+          if (!_drawFloor) {
+            c = _floorTexture
             _canvas.pset(x, _h - y - 1, c)
           }
         }
@@ -296,5 +302,4 @@ class Renderer {
   flip() {
     Canvas.draw(_canvas, 0, 0)
   }
-
 }
