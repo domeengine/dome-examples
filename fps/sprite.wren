@@ -4,6 +4,9 @@ import "input" for Keyboard, Mouse
 import "./keys" for InputGroup
 
 var PI_RAD = Num.pi / 180
+var VEC = Vec.new()
+var CAST_RESULT = [0, 0, 0, 0]
+var MOVE_SPEED = 2/ 60
 
 class Entity {
   construct new(position) {
@@ -21,6 +24,7 @@ class Player is Entity {
   construct new(position, angle) {
     super(position)
     _dir = Vec.new()
+    _vel = Vec.new()
     this.angle = angle
   }
 
@@ -35,10 +39,55 @@ class Player is Entity {
   }
 
   update(context) {
+    vel = vel.unit * MOVE_SPEED
 
+    var solid
+    var originalPosition = this.pos * 1
+    var oldPosition = VEC
+    oldPosition.x = this.pos.x
+    oldPosition.y = this.pos.y
+
+    pos.x = pos.x + vel.x
+    solid = context.isTileHit(pos)
+    if (solid) {
+      this.pos.x = oldPosition.x
+      this.pos.y = oldPosition.y
+    }
+
+    oldPosition.x = this.pos.x
+    oldPosition.y = this.pos.y
+
+    pos.y = pos.y + vel.y
+    solid = context.isTileHit(this.pos)
+    if (solid) {
+      this.pos.x = oldPosition.x
+      this.pos.y = oldPosition.y
+      solid = false
+    }
+    oldPosition.x = this.pos.x
+    oldPosition.y = this.pos.y
+
+    if (!solid) {
+      for (entity in context.entities) {
+        if ((entity.pos - this.pos).length < 0.5) {
+          solid = solid || entity.solid
+        }
+      }
+    }
+
+    if (solid) {
+      this.pos = originalPosition
+    }
+  }
+
+  getTarget(context) {
+    context.castRay(CAST_RESULT, pos, dir, true)
+    return CAST_RESULT[0]
   }
 
   dir { _dir }
+  vel { _vel }
+  vel=(v) { _vel = v }
 
 }
 
@@ -65,7 +114,7 @@ class Sprite is Entity {
 class DirectionalSprite is Sprite {
   construct new(pos, textures) {
     super(pos, textures)
-    _segmentSize = 360 / textures.count
+    _segmentSize = 360 / this.textures.count
   }
 
   update(context) {

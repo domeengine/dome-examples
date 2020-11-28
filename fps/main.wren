@@ -16,8 +16,6 @@ var VEC = Vec.new()
 var DIST_LOOKUP = []
 
 var SPEED = 0.001
-var MOVE_SPEED = 2/ 60
-
 var Interact = InputGroup.new([ Mouse["left"], Keyboard["e"], Keyboard["space"] ], SPEED)
 var Forward = InputGroup.new(Keyboard["w"], SPEED)
 var Back = InputGroup.new(Keyboard["s"], -SPEED)
@@ -25,8 +23,6 @@ var LeftBtn = InputGroup.new(Keyboard["a"], -SPEED)
 var RightBtn = InputGroup.new(Keyboard["d"], SPEED)
 var StrafeLeftBtn = InputGroup.new(Keyboard["left"], -1)
 var StrafeRightBtn = InputGroup.new(Keyboard["right"], 1)
-
-var CANVAS
 
 var DOORS = [
   Door.new(Vec.new(2, 11)),
@@ -73,21 +69,20 @@ var MAP = [
 class Game {
   static init() {
     var SCALE = 3
-    Mouse.relative = true
-    Mouse.hidden = true
     Canvas.resize(320, 200)
     Window.resize(SCALE*Canvas.width, SCALE*Canvas.height)
-    CANVAS = ImageData.create("buffer", Canvas.width, Canvas.height)
-    __rayBuffer = List.filled(Canvas.width, null).map { [0, 0, 0, 0] }.toList
+
+    Mouse.relative = true
+    Mouse.hidden = true
+
     __player = Player.new(Vec.new(7, 11), 0)
     __sprites = [
       //Pillar.new(Vec.new(8, 13)),
-      //Pillar.new(Vec.new(9, 15)),
+      Pillar.new(Vec.new(9, 15)),
       Person.new(Vec.new(8, 13))
     ]
     __doors = DOORS
     __map = TileMap.new(MAP, MAP_WIDTH, MAP_HEIGHT)
-    __direction = __player.dir
     __camera = __player.dir.perp
     __angle = 0
 
@@ -113,193 +108,55 @@ class Game {
   }
 
   static update() {
-    __player.update(__world)
     if (Keyboard.isKeyDown("escape")) {
       Process.exit()
     }
 
-    __angle = __angle + M.mid(-2, Mouse.x / 2, 2)
+    var angle = __player.angle
+    angle = angle + M.mid(-2, Mouse.x / 2, 2)
     if (StrafeLeftBtn.down) {
-      __angle = __angle + StrafeLeftBtn.action
+      angle = angle + StrafeLeftBtn.action
     }
     if (StrafeRightBtn.down) {
-      __angle = __angle + StrafeRightBtn.action
+      angle = angle + StrafeRightBtn.action
     }
-    __player.angle = __angle
-    __angle = __player.angle
+    __player.angle = angle
+
     __camera.x = -__player.dir.y
     __camera.y = __player.dir.x
-    __direction = __player.dir
-    // __camera = __direction.perp
 
-    var move = Vec.new()
+    var vel = __player.vel
+    vel.x = 0
+    vel.y = 0
+
     if (RightBtn.down) {
-      move = move + __camera * MOVE_SPEED
+      vel = vel + __camera
     }
     if (LeftBtn.down) {
-      move = move - __camera * MOVE_SPEED
+      vel = vel - __camera
     }
     if (Forward.down) {
-      move = move + __direction * MOVE_SPEED
+      vel = vel + __player.dir
     }
     if (Back.down) {
-      move = move - __direction * MOVE_SPEED
+      vel = vel - __player.dir
     }
-    // __player.pos = __player.pos + move.unit * MOVE_SPEED
-    move = move.unit * MOVE_SPEED
+    __player.vel = vel
 
-    var solid
-    var originalPosition = __player.pos * 1
-    var oldPosition = VEC
-    oldPosition.x = __player.pos.x
-    oldPosition.y = __player.pos.y
+    __world.update()
 
-    __player.pos.x = __player.pos.x + move.x
-    solid = __world.isTileHit(__player.pos)
-    if (solid) {
-      __player.pos.x = oldPosition.x
-      __player.pos.y = oldPosition.y
-    }
-
-    oldPosition.x = __player.pos.x
-    oldPosition.y = __player.pos.y
-
-    __player.pos.y = __player.pos.y + move.y
-    solid = __world.isTileHit(__player.pos)
-    if (solid) {
-      __player.pos.x = oldPosition.x
-      __player.pos.y = oldPosition.y
-      solid = false
-    }
-    oldPosition.x = __player.pos.x
-    oldPosition.y = __player.pos.y
-
-    if (!solid) {
-      for (entity in __sprites) {
-        if ((entity.pos - __player.pos).length < 0.5) {
-          solid = solid || entity.solid
-        }
-      }
-    }
-
-    if (solid) {
-      __player.pos = originalPosition
-    }
-
-    __sprites.each {|sprite| sprite.update(__world) }
-    // TODO sprite update
-    sortSprites(__sprites, __player.pos)
-
-
-    var castResult = [0, 0, 0, 0]
-    castRay(castResult, __player.pos, __player.dir, true)
-    var targetPos = castResult[0]
+    var targetPos = __player.getTarget(__world)
     var dist = targetPos - __player.pos
 
     if (Interact.firing) {
-      if (getTileAt(targetPos) == 5 && dist.length < 2.75) {
-        getDoorAt(targetPos).open()
+      if (__world.getTileAt(targetPos) == 5 && dist.length < 2.75) {
+        __world.getDoorAt(targetPos).open()
       }
     }
-    __doors.each {|door|
-      if ((door.pos - __player.pos).length >= 2.75) {
-        door.close()
-      }
-      door.update()
-    }
+
 
     __dirty = true
     __renderer.update()
-  }
-
-  static castRay(result, rayPosition, rayDirection, ignoreDoors) {
-    var sideDistanceX = (1.0 + rayDirection.y.pow(2) / rayDirection.x.pow(2)).sqrt
-    var sideDistanceY = (1.0 + rayDirection.x.pow(2) / rayDirection.y.pow(2)).sqrt
-
-    var nextSideDistanceX
-    var nextSideDistanceY
-    var mapPos = Vec.new(rayPosition.x.floor, rayPosition.y.floor)
-    var stepDirection = Vec.new()
-    if (rayDirection.x < 0) {
-      stepDirection.x = -1
-      nextSideDistanceX = (rayPosition.x - mapPos.x) * sideDistanceX
-    } else {
-      stepDirection.x = 1
-      nextSideDistanceX = (mapPos.x + 1.0 - rayPosition.x) * sideDistanceX
-    }
-    if (rayDirection.y < 0) {
-      stepDirection.y = -1
-      nextSideDistanceY = (rayPosition.y - mapPos.y) * sideDistanceY
-    } else {
-      stepDirection.y = 1
-      nextSideDistanceY = (mapPos.y + 1.0 - rayPosition.y) * sideDistanceY
-    }
-
-    var hit = false
-    var side = 0
-    while (!hit) {
-      if (nextSideDistanceX < nextSideDistanceY) {
-        nextSideDistanceX = nextSideDistanceX + sideDistanceX
-        mapPos.x = (mapPos.x + stepDirection.x)
-        side = 0
-      } else {
-        nextSideDistanceY = nextSideDistanceY + sideDistanceY
-        mapPos.y = (mapPos.y + stepDirection.y)
-        side = 1
-      }
-
-      var tile = getTileAt(mapPos)
-      if (tile == 5) {
-        // Figure out the door position
-        var doorState = ignoreDoors ? 1 : getDoorAt(mapPos).state
-        var adj
-        var ray_mult
-        // Adjustment
-        if (side == 0) {
-          adj = mapPos.x - __player.pos.x + 1
-          if (__player.pos.x < mapPos.x) {
-            adj = adj - 1
-          }
-          ray_mult = adj / rayDirection.x
-        } else {
-          // var halfX = mapPos.x + sideDistanceX * 0.5
-          adj = mapPos.y - __player.pos.y
-          if (__player.pos.y > mapPos.y) {
-            adj = adj + 1
-          }
-          ray_mult = adj / rayDirection.y
-        }
-
-        var rye2 = rayPosition.y + rayDirection.y * ray_mult
-        var rxe2 = rayPosition.x + rayDirection.x * ray_mult
-
-        var trueDeltaX = sideDistanceX
-        var trueDeltaY = sideDistanceY
-        if (rayDirection.y.abs < 0.01) {
-          trueDeltaY = 100
-        }
-        if (rayDirection.x.abs < 0.01) {
-          trueDeltaX = 100
-        }
-
-        if (side == 0) {
-          // var halfY = mapPos.y + sideDistanceY * 0.5
-          var true_y_step = (trueDeltaX * trueDeltaX - 1).sqrt
-          var half_step_in_y = rye2 + (stepDirection.y * true_y_step) * 0.5
-          hit = (half_step_in_y.floor == mapPos.y) && (1 - 2*(half_step_in_y - mapPos.y)).abs > 1 - doorState
-        } else {
-          var true_x_step = (trueDeltaY * trueDeltaY - 1).sqrt
-          var half_step_in_x = rxe2 + (stepDirection.x * true_x_step) * 0.5
-          hit = (half_step_in_x.floor == mapPos.x) && (1 - 2*(half_step_in_x - mapPos.x)).abs > 1 - doorState
-        }
-      } else {
-        hit = tile > 0
-      }
-    }
-    result[0] = mapPos
-    result[1] = side
-    result[2] = stepDirection
-    return result
   }
 
   static draw(alpha) {
@@ -317,28 +174,6 @@ class Game {
     __dirty = false
   }
 
-  static getTileAt(position) {
-    VEC.x = position.x.floor
-    VEC.y = position.y.floor
-    var pos = VEC
-    if (pos.x >= 0 && pos.x < MAP_WIDTH && pos.y >= 0 && pos.y < MAP_HEIGHT) {
-      return __map[MAP_WIDTH * pos.y + pos.x]
-    }
-    return 1
-  }
-
-  static getDoorAt(position) {
-    VEC.x = position.x.floor
-    VEC.y = position.y.floor
-    var mapPos = VEC
-    for (door in __doors) {
-      if (door.pos == mapPos) {
-        return door
-      }
-    }
-    return null
-  }
-
   static sortSprites(list, position) {
     var i = 1
     while (i < list.count) {
@@ -351,25 +186,5 @@ class Game {
       list[j + 1] = x
       i = i + 1
     }
-  }
-  static cls() {
-    if (!(DRAW_FLOORS && DRAW_CEILING)) {
-      for (y in 0...Canvas.height / 2) {
-        for (x in 0...Canvas.width) {
-          var c
-          if (!DRAW_CEILING) {
-            c = Color.lightgray
-            CANVAS.pset(x, y, c)
-          }
-          if (!DRAW_FLOORS) {
-            c = Color.darkgray
-            CANVAS.pset(x, Canvas.height - y - 1, c)
-          }
-        }
-      }
-    }
-  }
-  static flip() {
-    Canvas.draw(CANVAS, 0, 0)
   }
 }
