@@ -1,6 +1,8 @@
 import "math" for Vec, M
+import "./map" for TileMap, Tile
 var VEC = Vec.new()
 
+/*
 class TileMap {
   construct new(tiles, width, height) {
     _tiles = tiles
@@ -13,6 +15,7 @@ class TileMap {
   height { _height }
 
 }
+*/
 
 class World {
   construct new() {}
@@ -52,11 +55,14 @@ class World {
   getTileAt(position) {
     VEC.x = position.x.floor
     VEC.y = position.y.floor
+    return map.get(VEC)
+    /*
     var pos = VEC
     if (pos.x >= 0 && pos.x < map.width && pos.y >= 0 && pos.y < map.height) {
       return map[map.height * pos.y + pos.x]
     }
     return 1
+    */
   }
 
   getDoorAt(position) {
@@ -72,13 +78,16 @@ class World {
   }
 
   isTileHit(pos) {
+    //VEC.x = pos.x.floor
+    //VEC.y = pos.y.floor
+    //var mapPos = VEC
     var mapPos = Vec.new(pos.x.floor, pos.y.floor)
     var tile = getTileAt(mapPos)
     var hit = false
-    if (tile == 5) {
+    if (tile["door"] == true) {
       hit = getDoorAt(mapPos).state > 0.5
     } else {
-      hit = tile > 0
+      hit = tile["solid"] == true
     }
     return hit
   }
@@ -166,7 +175,7 @@ class World {
           hit = (half_step_in_x.floor == mapPos.x) && (1 - 2*(half_step_in_x - mapPos.x)).abs > 1 - doorState
         }
       } else {
-        hit = tile > 0
+        hit = tile["solid"] == true
       }
     }
     result[0] = mapPos

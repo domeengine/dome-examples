@@ -56,7 +56,7 @@ class Renderer {
         var tile = _world.getTileAt(mapPos)
 
         var perpWallDistance
-        if (tile == 5) {
+        if (tile["door"] == true) {
           // If it's a door, we need to shift the map position to draw it in the correct location
           if (side == 0) {
             mapPos.x = mapPos.x + stepDirection.x / 2
@@ -112,7 +112,7 @@ class Renderer {
       var tile = _world.getTileAt(mapPos)
       var texture
       Fiber.new {
-        texture = _world.textures[tile - 1]
+        texture = _world.textures[tile.texture - 1]
       }.try()
 
       var lineHeight = M.abs(_h / perpWallDistance)

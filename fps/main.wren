@@ -5,7 +5,7 @@ import "input" for Keyboard, Mouse
 import "./keys" for InputGroup
 import "./sprite" for Sprite, Pillar, Player, Person
 import "./door" for Door
-import "./context" for World, TileMap
+import "./context" for World, TileMap, Tile
 import "./texture" for Texture
 import "./renderer" for Renderer
 
@@ -76,7 +76,16 @@ class Game {
       Person.new(Vec.new(8, 13))
     ]
     __doors = DOORS
-    __map = TileMap.new(MAP, MAP_WIDTH, MAP_HEIGHT)
+    __map = TileMap.new(MAP_WIDTH, MAP_HEIGHT)
+    for (y in 0...MAP_HEIGHT) {
+      for (x in 0...MAP_WIDTH) {
+        var type = MAP[y * MAP_WIDTH + x]
+        __map.set(x, y, Tile.new(type, {
+          "solid": type != 0,
+          "door": type == 5
+        }))
+      }
+    }
     __camera = __player.dir.perp
     __angle = 0
 
@@ -141,6 +150,7 @@ class Game {
     __world.update()
 
     var targetPos = __player.getTarget(__world)
+    System.print(__world.getTileAt(targetPos))
     var dist = targetPos - __player.pos
 
     if (Interact.firing) {
