@@ -75,6 +75,8 @@ class TileMap {
   }
   get(vec) { get(vec.x, vec.y) }
   get(x, y) {
+    x = x.floor
+    y = y.floor
     if (x < 0 || x >= width || y < 0 || y >= height) {
       return VOID_TILE
     }
@@ -83,6 +85,8 @@ class TileMap {
 
   set(vec, tile) { setTile(vec.x, vec.y, tile) }
   set(x, y, tile) {
+    x = x.floor
+    y = y.floor
     if (x < 0 || x >= width || y < 0 || y >= height) {
       Fiber.abort("Tile index out of bounds (%(x),%(y))")
     }

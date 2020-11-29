@@ -53,9 +53,8 @@ class World {
   }
 
   getTileAt(position) {
-    VEC.x = position.x.floor
-    VEC.y = position.y.floor
-    return map.get(VEC)
+    return map.get(position)
+    // return map.get(position.x.floor, position.y.floor)
     /*
     var pos = VEC
     if (pos.x >= 0 && pos.x < map.width && pos.y >= 0 && pos.y < map.height) {
@@ -78,10 +77,10 @@ class World {
   }
 
   isTileHit(pos) {
-    //VEC.x = pos.x.floor
-    //VEC.y = pos.y.floor
-    //var mapPos = VEC
-    var mapPos = Vec.new(pos.x.floor, pos.y.floor)
+    VEC.x = pos.x.floor
+    VEC.y = pos.y.floor
+    var mapPos = VEC
+    //var mapPos = Vec.new(pos.x.round, pos.y.round)
     var tile = getTileAt(mapPos)
     var hit = false
     if (tile["door"] == true) {
@@ -132,7 +131,7 @@ class World {
       }
 
       var tile = getTileAt(mapPos)
-      if (tile == 5) {
+      if (tile["door"]) {
         // Figure out the door position
         var doorState = ignoreDoors ? 1 : getDoorAt(mapPos).state
         var adj

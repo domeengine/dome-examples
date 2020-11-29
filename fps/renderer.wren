@@ -299,12 +299,15 @@ class Renderer {
         //2) it's on the screen (left)
         //3) it's on the screen (right)
         //4) ZBuffer, with perpendicular distance
-        if (transformY > 0 && stripe >= 0 && stripe < _w && transformY < _rayBuffer[stripe][0]) {
+        if (transformY > 0 && stripe > 0 && stripe < _w && transformY < _rayBuffer[stripe][0]) {
           for (y in drawStartY...drawEndY) {
             var texY = (((y - vMoveScreen) - (-spriteHeight / 2 + _h / 2)) * texHeight / spriteHeight).abs
             var color = texture.pget(texX, texY)
             if (color.a != 0) {
               _canvas.pset(stripe, y.floor, color)
+              if (stripe == 1) {
+                _canvas.pset(0, y.floor, color)
+              }
             }
           }
         }

@@ -150,7 +150,6 @@ class Game {
     __world.update()
 
     var targetPos = __player.getTarget(__world)
-    System.print(__world.getTileAt(targetPos))
     var dist = targetPos - __player.pos
 
     if (Interact.firing) {
