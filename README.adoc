@@ -46,6 +46,9 @@ Pong clone from https://wireframe.raspberrypi.org/books/code-the-classics1["Code
 ### link:platformer{ext-relative}[Platformer]
 A simple platformer engine, based on https://mattmakesgames.tumblr.com/post/127890619821/towerfall-physics[this article] about the physics of Towerfall.
 
+### link:tilemap-editor{ext-relative}[TileMap Editor]
+An in-engine tilemap editor, based on the Platformer example.
+
 ### link:roguelike{ext-relative}[Roguelike]
 The bare-basic framework for a top-down roguelike, based on the turn-based game loop discussed https://journal.stuffwithstuff.com/2014/07/15/a-turn-based-game-loop/[here].
 
