@@ -25,3 +25,6 @@
 [submodule "rhythmdrive"]
 	path = rhythmdrive
 	url = https://github.com/avivbeeri/RhythmDrive
+[submodule "nok-synth"]
+	path = nok-synth
+	url = git@github.com:avivbeeri/nok-synth.git
