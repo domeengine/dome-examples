@@ -1,0 +1,14 @@
+# Raster Font Example
+
+This is a simple font bitmap font loader.
+
+With this code you can load fonts stored in pngs and change it's color.
+
+image:https://user-images.githubusercontent.com/292738/124190140-cbd75f00-da8f-11eb-9f80-14bffd4973ea.png[]
+
+Keep in mind this changes each pixel color. So it may not be performant in huge images.
+Use it with care.
+
+- License: MIT
+- Author: _CLSource_
+- ZEROmod2 font from https://github.com/psgcabal/lsdfonts
