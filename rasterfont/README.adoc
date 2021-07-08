@@ -12,3 +12,4 @@ Use it with care.
 - License: MIT
 - Author: _CLSource_
 - ZEROmod2 font from https://github.com/psgcabal/lsdfonts
+- More fonts at: https://github.com/robhagemans/hoard-of-bitfonts
