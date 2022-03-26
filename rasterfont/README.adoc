@@ -7,7 +7,7 @@ With this code you can load fonts stored in pngs and change it's color.
 image:https://user-images.githubusercontent.com/292738/124190140-cbd75f00-da8f-11eb-9f80-14bffd4973ea.png[]
 
 Keep in mind this changes each pixel color. So it may not be performant in huge images.
-Use it with care.
+This was needed because the font used has two colors. You probably don't need to do this if you use the https://domeengine.com/modules/graphics#font[`transform(parameterMap)`] with the "MONO" color mode (assuming the font is always a single color), which might ease the load a bit.
 
 - License: MIT
 - Author: _CLSource_
