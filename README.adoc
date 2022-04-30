@@ -81,5 +81,5 @@ Relax. It will be okay.
 ### https://github.com/avivbeeri/RhythmDrive[Rhythm Drive]
 In the far-flung future, faster-than-light travel has been discovered, through the traversal of "RhythmSpace". Engage your space-ship's "rhythmdrive" and take to the stars!
 
-### https://github.com/whmsft/popup
-A simple popUP game where your work is to close as many popups you can!
+### https://github.com/whmsft/popup[PopUp]
+A simple pop-up game where your work is to close as many popups you can!
